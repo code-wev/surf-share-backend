@@ -7,17 +7,36 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      Role     @default(USER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String                @id @default(uuid())
+  name               String
+  email              String                @unique
+  password           String
+  role               Role                  @default(SURFER)
+  countryName        String?
+  address            String?
+  phoneNumber        String?
+  
+  // Specific to PHOTOGRAPHER
+  paypalEmail        String?
+  
+  // Specific to MODERATOR
+  permissions        ModeratorPermission[]
+  
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
 
   @@map("users")
 }
 
 enum Role {
-  USER
+  SURFER
+  PHOTOGRAPHER
+  MODERATOR
   ADMIN
+}
+
+enum ModeratorPermission {
+  APPROVE_PHOTO
+  ADD_LOCATION
+  ALL_ACCESS
 }
