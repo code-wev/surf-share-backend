@@ -1,26 +1,15 @@
 import type { RequestHandler } from 'express';
 import type { ZodType } from 'zod';
 
-type RequestValidationTarget = {
-  body: unknown;
-  params: unknown;
-  query: unknown;
-};
-
-const validateRequest = (
-  schema: ZodType<Partial<RequestValidationTarget>>
-): RequestHandler => {
+const validateRequest = (schema: ZodType<any, any, any>): RequestHandler => {
   return async (req, _res, next) => {
     try {
-      const parsedData = await schema.parseAsync({
+      await schema.parseAsync({
         body: req.body,
+        query: req.query,
         params: req.params,
-        query: req.query
+        cookies: req.cookies,
       });
-
-      if (Object.prototype.hasOwnProperty.call(parsedData, 'body')) {
-        req.body = parsedData.body;
-      }
 
       next();
     } catch (error) {
@@ -30,3 +19,5 @@ const validateRequest = (
 };
 
 export default validateRequest;
+
+
