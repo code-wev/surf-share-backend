@@ -1,17 +1,30 @@
 import app from './app';
 import config from './app/config';
 import prisma from './app/utils/prisma';
+import { seedAdmin } from './app/db';
 
-const server = app.listen(config.port);
+let server: any;
 
-server.on('listening', () => {
-  console.log(`Server is running on port ${config.port}`);
-});
+const bootstrap = async () => {
+  try {
+    await seedAdmin();
+    server = app.listen(config.port);
 
-server.on('error', (error: NodeJS.ErrnoException) => {
-  console.error(`Failed to start server on port ${config.port}:`, error.message);
-  process.exit(1);
-});
+    server.on('listening', () => {
+      console.log(`Server is running on port ${config.port}`);
+    });
+
+    server.on('error', (error: NodeJS.ErrnoException) => {
+      console.error(`Failed to start server on port ${config.port}:`, error.message);
+      process.exit(1);
+    });
+  } catch (error) {
+    console.error('Failed to start the application:', error);
+    process.exit(1);
+  }
+};
+
+bootstrap();
 
 const shutdown = async (signal: string): Promise<void> => {
   console.log(`${signal} received. Shutting down gracefully.`);
