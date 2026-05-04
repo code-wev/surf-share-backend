@@ -105,20 +105,51 @@ const loginUser = async (payload: IUserLoginPayload): Promise<ILoginResponse> =>
   return { accessToken, user: sanitizeUser(user) };
 };
 
-const getAllUsers = async (query: Record<string, unknown>): Promise<IUserResponse[]> => {
-  const { role } = query;
-  const filter: Prisma.UserWhereInput = {};
+const getAllUsers = async (query: Record<string, unknown>) => {
+  const { role, page = 1, limit = 10 } = query;
   
-  if (role && typeof role === 'string') {
-    filter.role = role.toUpperCase() as Role;
+  // By default, only return Surfers and Photographers
+  const filter: Prisma.UserWhereInput = {
+    role: {
+      in: [Role.SURFER, Role.PHOTOGRAPHER],
+    },
+  };
+  
+  if (role && typeof role === 'string' && role !== 'All Users') {
+    if (role === 'Contributors') {
+      filter.role = Role.PHOTOGRAPHER;
+    } else if (role === 'Users') {
+      filter.role = Role.SURFER;
+    } else if (role.toUpperCase() === 'SURFER' || role.toUpperCase() === 'PHOTOGRAPHER') {
+      filter.role = role.toUpperCase() as Role;
+    }
+    // Any other role queries (like ADMIN or MODERATOR) will be ignored,
+    // falling back to the safe default of only SURFER and PHOTOGRAPHER.
   }
 
-  const users = await prisma.user.findMany({
-    where: filter,
-    orderBy: { createdAt: 'desc' }
-  });
+  const pageNumber = Number(page) || 1;
+  const limitNumber = Number(limit) || 10;
+  const skip = (pageNumber - 1) * limitNumber;
 
-  return users.map(sanitizeUser);
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where: filter,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limitNumber
+    }),
+    prisma.user.count({ where: filter })
+  ]);
+
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPages: Math.ceil(total / limitNumber)
+    },
+    data: users.map(sanitizeUser)
+  };
 };
 
 const getUserById = async (id: string): Promise<IUserResponse> => {
