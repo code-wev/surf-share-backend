@@ -1,19 +1,20 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { Role, User, Prisma } from '@prisma/client';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { Role, User, Prisma } from "@prisma/client";
 
-import config from '../../config';
-import AppError from '../../errors/AppError';
-import prisma from '../../utils/prisma';
+import config from "../../config";
+import AppError from "../../errors/AppError";
+import prisma from "../../utils/prisma";
 import type {
   ILoginResponse,
   IUserLoginPayload,
   ISurferRegisterPayload,
   IPhotographerRegisterPayload,
   IModeratorRegisterPayload,
-  IUserResponse
-} from './user.interface';
+  IUserResponse,
+} from "./user.interface";
 
+// Helper function to sanitize user data before sending it in responses
 const sanitizeUser = (user: User): IUserResponse => ({
   id: user.id,
   name: user.name,
@@ -26,16 +27,23 @@ const sanitizeUser = (user: User): IUserResponse => ({
   permissions: user.permissions as any,
 });
 
+// Check if a user with the given email already exists
 const checkExistingUser = async (email: string) => {
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
-    throw new AppError(409, 'A user with this email already exists.');
+    throw new AppError(409, "A user with this email already exists.");
   }
-}
+};
 
-const registerSurfer = async (payload: ISurferRegisterPayload): Promise<IUserResponse> => {
+// Register as Surfer
+const registerSurfer = async (
+  payload: ISurferRegisterPayload,
+): Promise<IUserResponse> => {
   await checkExistingUser(payload.email);
-  const hashedPassword = await bcrypt.hash(payload.password!, Number(config.bcryptSaltRounds));
+  const hashedPassword = await bcrypt.hash(
+    payload.password!,
+    Number(config.bcryptSaltRounds),
+  );
 
   const user = await prisma.user.create({
     data: {
@@ -45,16 +53,22 @@ const registerSurfer = async (payload: ISurferRegisterPayload): Promise<IUserRes
       address: payload.address,
       phoneNumber: payload.phoneNumber,
       password: hashedPassword,
-      role: Role.SURFER
-    }
+      role: Role.SURFER,
+    },
   });
 
   return sanitizeUser(user);
 };
 
-const registerPhotographer = async (payload: IPhotographerRegisterPayload): Promise<IUserResponse> => {
+// Register as Photographer
+const registerPhotographer = async (
+  payload: IPhotographerRegisterPayload,
+): Promise<IUserResponse> => {
   await checkExistingUser(payload.email);
-  const hashedPassword = await bcrypt.hash(payload.password!, Number(config.bcryptSaltRounds));
+  const hashedPassword = await bcrypt.hash(
+    payload.password!,
+    Number(config.bcryptSaltRounds),
+  );
 
   const user = await prisma.user.create({
     data: {
@@ -65,16 +79,22 @@ const registerPhotographer = async (payload: IPhotographerRegisterPayload): Prom
       phoneNumber: payload.phoneNumber,
       paypalEmail: payload.paypalEmail,
       password: hashedPassword,
-      role: Role.PHOTOGRAPHER
-    }
+      role: Role.PHOTOGRAPHER,
+    },
   });
 
   return sanitizeUser(user);
 };
 
-const registerModerator = async (payload: IModeratorRegisterPayload): Promise<IUserResponse> => {
+// Register as Moderator
+const registerModerator = async (
+  payload: IModeratorRegisterPayload,
+): Promise<IUserResponse> => {
   await checkExistingUser(payload.email);
-  const hashedPassword = await bcrypt.hash(payload.password!, Number(config.bcryptSaltRounds));
+  const hashedPassword = await bcrypt.hash(
+    payload.password!,
+    Number(config.bcryptSaltRounds),
+  );
 
   const user = await prisma.user.create({
     data: {
@@ -85,66 +105,85 @@ const registerModerator = async (payload: IModeratorRegisterPayload): Promise<IU
       phoneNumber: payload.phoneNumber,
       permissions: payload.permissions,
       password: hashedPassword,
-      role: Role.MODERATOR
-    }
+      role: Role.MODERATOR,
+    },
   });
 
   return sanitizeUser(user);
 };
 
-const loginUser = async (payload: IUserLoginPayload): Promise<ILoginResponse> => {
-  const user = await prisma.user.findUnique({ where: { email: payload.email } });
-  if (!user) throw new AppError(401, 'Invalid email or password.');
+// Login
+const loginUser = async (
+  payload: IUserLoginPayload,
+): Promise<ILoginResponse> => {
+  const user = await prisma.user.findUnique({
+    where: { email: payload.email },
+  });
+  if (!user) throw new AppError(401, "Invalid email or password.");
 
-  const isPasswordMatched = await bcrypt.compare(payload.password, user.password);
-  if (!isPasswordMatched) throw new AppError(401, 'Invalid email or password.');
+  const isPasswordMatched = await bcrypt.compare(
+    payload.password,
+    user.password,
+  );
+  if (!isPasswordMatched) throw new AppError(401, "Invalid email or password.");
 
   const authPayload = { userId: user.id, email: user.email, role: user.role };
-  const accessToken = jwt.sign(authPayload, config.jwt.accessSecret as string, { expiresIn: config.jwt.accessExpiresIn as any });
+  const accessToken = jwt.sign(authPayload, config.jwt.accessSecret as string, {
+    expiresIn: config.jwt.accessExpiresIn as any,
+  });
 
   return { accessToken, user: sanitizeUser(user) };
 };
 
-const getAllUsers = async (query: Record<string, unknown>): Promise<IUserResponse[]> => {
+// Get all users (with optional role filter)
+const getAllUsers = async (
+  query: Record<string, unknown>,
+): Promise<IUserResponse[]> => {
   const { role } = query;
   const filter: Prisma.UserWhereInput = {};
-  
-  if (role && typeof role === 'string') {
+
+  if (role && typeof role === "string") {
     filter.role = role.toUpperCase() as Role;
   }
 
   const users = await prisma.user.findMany({
     where: filter,
-    orderBy: { createdAt: 'desc' }
+    orderBy: { createdAt: "desc" },
   });
 
   return users.map(sanitizeUser);
 };
 
+// Get user by ID
 const getUserById = async (id: string): Promise<IUserResponse> => {
   const user = await prisma.user.findUnique({ where: { id } });
-  if (!user) throw new AppError(404, 'User not found.');
+  if (!user) throw new AppError(404, "User not found.");
   return sanitizeUser(user);
 };
 
-const updateUser = async (id: string, payload: Partial<User>): Promise<IUserResponse> => {
+// Update user by ID
+const updateUser = async (
+  id: string,
+  payload: Partial<User>,
+): Promise<IUserResponse> => {
   const existingUser = await prisma.user.findUnique({ where: { id } });
-  if (!existingUser) throw new AppError(404, 'User not found.');
+  if (!existingUser) throw new AppError(404, "User not found.");
 
   const updatedUser = await prisma.user.update({
     where: { id },
-    data: payload
+    data: payload,
   });
 
   return sanitizeUser(updatedUser);
 };
 
+// Delete user by ID
 const deleteUser = async (id: string): Promise<IUserResponse> => {
   const existingUser = await prisma.user.findUnique({ where: { id } });
-  if (!existingUser) throw new AppError(404, 'User not found.');
+  if (!existingUser) throw new AppError(404, "User not found.");
 
   const deletedUser = await prisma.user.delete({
-    where: { id }
+    where: { id },
   });
 
   return sanitizeUser(deletedUser);
@@ -158,5 +197,5 @@ export const UserService = {
   getAllUsers,
   getUserById,
   updateUser,
-  deleteUser
+  deleteUser,
 };

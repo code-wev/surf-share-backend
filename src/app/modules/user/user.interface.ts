@@ -1,4 +1,7 @@
-import type { UserRole, ModeratorPermission } from '../../interfaces/auth.interface';
+import type {
+  UserRole,
+  ModeratorPermission,
+} from "../../interfaces/auth.interface";
 
 export interface IBaseUserPayload {
   name: string;
