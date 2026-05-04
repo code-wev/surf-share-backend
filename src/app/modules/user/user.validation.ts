@@ -1,55 +1,91 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // We map permissions strings from Prisma client in actual use, but here we can just use strings
-const ModeratorPermissionEnum = z.enum(['APPROVE_PHOTO', 'ADD_LOCATION', 'ALL_ACCESS']);
+const ModeratorPermissionEnum = z.enum([
+  "APPROVE_PHOTO",
+  "ADD_LOCATION",
+  "ALL_ACCESS",
+]);
 
+// Base validation for all user types
 const passwordValidation = z
-  .string({ message: 'Password is required.' })
-  .min(8, 'Password must be at least 8 characters long.');
+  .string({ message: "Password is required." })
+  .min(8, "Password must be at least 8 characters long.");
 
+// Common fields for all user types
 const baseUserValidation = {
-  name: z.string({ message: 'Name is required.' }).trim().min(2, 'Name must be at least 2 characters.'),
-  email: z.string({ message: 'Email is required.' }).trim().email('Email must be a valid email address.').transform((v) => v.toLowerCase()),
+  name: z
+    .string({ message: "Name is required." })
+    .trim()
+    .min(2, "Name must be at least 2 characters."),
+  email: z
+    .string({ message: "Email is required." })
+    .trim()
+    .email("Email must be a valid email address.")
+    .transform((v) => v.toLowerCase()),
   password: passwordValidation,
   countryName: z.string().optional(),
   address: z.string().optional(),
   phoneNumber: z.string().optional(),
 };
 
+// Registration Validations for Surfer
 const registerSurfer = z.object({
-  body: z.object({ ...baseUserValidation }).strict()
+  body: z.object({ ...baseUserValidation }).strict(),
 });
 
+// Registration Validations for Photographer
 const registerPhotographer = z.object({
-  body: z.object({
-    ...baseUserValidation,
-    paypalEmail: z.string({ message: 'Paypal email is required for photographers.' }).trim().email('Paypal email must be a valid email address.').transform((v) => v.toLowerCase()),
-  }).strict()
+  body: z
+    .object({
+      ...baseUserValidation,
+      paypalEmail: z
+        .string({ message: "Paypal email is required for photographers." })
+        .trim()
+        .email("Paypal email must be a valid email address.")
+        .transform((v) => v.toLowerCase()),
+    })
+    .strict(),
 });
 
+// Registration Validations for Moderator
 const registerModerator = z.object({
-  body: z.object({
-    ...baseUserValidation,
-    permissions: z.array(ModeratorPermissionEnum).min(1, 'At least one permission is required.'),
-  }).strict()
+  body: z
+    .object({
+      ...baseUserValidation,
+      permissions: z
+        .array(ModeratorPermissionEnum)
+        .min(1, "At least one permission is required."),
+    })
+    .strict(),
 });
 
+// Login Validation
 const login = z.object({
-  body: z.object({
-    email: z.string({ message: 'Email is required.' }).trim().email('Email must be a valid email address.').transform((v) => v.toLowerCase()),
-    password: z.string({ message: 'Password is required.' })
-  }).strict()
+  body: z
+    .object({
+      email: z
+        .string({ message: "Email is required." })
+        .trim()
+        .email("Email must be a valid email address.")
+        .transform((v) => v.toLowerCase()),
+      password: z.string({ message: "Password is required." }),
+    })
+    .strict(),
 });
 
+// Update User Validation
 const updateUser = z.object({
-  body: z.object({
-    name: z.string().trim().min(2).optional(),
-    countryName: z.string().optional(),
-    address: z.string().optional(),
-    phoneNumber: z.string().optional(),
-    paypalEmail: z.string().email().optional(),
-    permissions: z.array(ModeratorPermissionEnum).optional(),
-  }).strict()
+  body: z
+    .object({
+      name: z.string().trim().min(2).optional(),
+      countryName: z.string().optional(),
+      address: z.string().optional(),
+      phoneNumber: z.string().optional(),
+      paypalEmail: z.string().email().optional(),
+      permissions: z.array(ModeratorPermissionEnum).optional(),
+    })
+    .strict(),
 });
 
 export const UserValidation = {
@@ -57,5 +93,5 @@ export const UserValidation = {
   registerPhotographer,
   registerModerator,
   login,
-  updateUser
+  updateUser,
 };
