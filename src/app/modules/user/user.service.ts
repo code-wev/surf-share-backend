@@ -116,12 +116,10 @@ const getAllUsers = async (query: Record<string, unknown>) => {
   };
   
   if (role && typeof role === 'string' && role !== 'All Users') {
-    if (role === 'Contributors') {
+    if (role === 'Photographers' || role.toUpperCase() === 'PHOTOGRAPHER') {
       filter.role = Role.PHOTOGRAPHER;
-    } else if (role === 'Users') {
+    } else if (role === 'Surfers' || role.toUpperCase() === 'SURFER') {
       filter.role = Role.SURFER;
-    } else if (role.toUpperCase() === 'SURFER' || role.toUpperCase() === 'PHOTOGRAPHER') {
-      filter.role = role.toUpperCase() as Role;
     }
     // Any other role queries (like ADMIN or MODERATOR) will be ignored,
     // falling back to the safe default of only SURFER and PHOTOGRAPHER.
