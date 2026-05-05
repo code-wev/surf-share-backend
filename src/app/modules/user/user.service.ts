@@ -150,9 +150,11 @@ const getAllUsers = async (query: Record<string, unknown>) => {
       filter.role = Role.PHOTOGRAPHER;
     } else if (role === 'Surfers' || role.toUpperCase() === 'SURFER') {
       filter.role = Role.SURFER;
+    } else if (role.toUpperCase() === 'MODERATOR' || role === 'Moderators') {
+      filter.role = Role.MODERATOR;
+    } else if (role.toUpperCase() === 'ADMIN' || role === 'Admins') {
+      filter.role = Role.ADMIN;
     }
-    // Any other role queries (like ADMIN or MODERATOR) will be ignored,
-    // falling back to the safe default of only SURFER and PHOTOGRAPHER.
   }
 
   const pageNumber = Number(page) || 1;
