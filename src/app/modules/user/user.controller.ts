@@ -1,53 +1,58 @@
-import type { RequestHandler } from 'express';
+import type { RequestHandler } from "express";
 
-import catchAsync from '../../utils/catchAsync';
-import sendResponse from '../../utils/sendResponse';
-import { UserService } from './user.service';
+import catchAsync from "../../utils/catchAsync";
+import sendResponse from "../../utils/sendResponse";
+import { UserService } from "./user.service";
 
+// Register as Surfer
 const registerSurfer: RequestHandler = catchAsync(async (req, res) => {
   const result = await UserService.registerSurfer(req.body);
 
   sendResponse(res, {
     statusCode: 201,
     success: true,
-    message: 'Surfer registered successfully.',
-    data: result
+    message: "Surfer registered successfully.",
+    data: result,
   });
 });
 
+// Register as Photographer
 const registerPhotographer: RequestHandler = catchAsync(async (req, res) => {
   const result = await UserService.registerPhotographer(req.body);
 
   sendResponse(res, {
     statusCode: 201,
     success: true,
-    message: 'Photographer registered successfully.',
-    data: result
+    message: "Photographer registered successfully.",
+    data: result,
   });
 });
 
+// Register as Moderator
 const registerModerator: RequestHandler = catchAsync(async (req, res) => {
   const result = await UserService.registerModerator(req.body);
 
   sendResponse(res, {
     statusCode: 201,
     success: true,
-    message: 'Moderator registered successfully.',
-    data: result
+    message: "Moderator registered successfully.",
+    data: result,
   });
 });
 
+// Login
 const loginUser: RequestHandler = catchAsync(async (req, res) => {
   const result = await UserService.loginUser(req.body);
 
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: 'User logged in successfully.',
-    data: result
+    message: "User logged in successfully.",
+    data: result,
   });
 });
 
+// Get all users (with optional role filter)
 const getAllUsers: RequestHandler = catchAsync(async (req, res) => {
   const result = await UserService.getAllUsers(req.query);
 
@@ -60,36 +65,42 @@ const getAllUsers: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+// Get user by ID
 const getUserById: RequestHandler = catchAsync(async (req, res) => {
   const result = await UserService.getUserById(req.params.id as string);
 
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: 'User retrieved successfully.',
-    data: result
+    message: "User retrieved successfully.",
+    data: result,
   });
 });
 
+// Update user by ID
 const updateUser: RequestHandler = catchAsync(async (req, res) => {
-  const result = await UserService.updateUser(req.params.id as string, req.body);
+  const result = await UserService.updateUser(
+    req.params.id as string,
+    req.body,
+  );
 
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: 'User updated successfully.',
-    data: result
+    message: "User updated successfully.",
+    data: result,
   });
 });
 
+// Delete user by ID
 const deleteUser: RequestHandler = catchAsync(async (req, res) => {
   const result = await UserService.deleteUser(req.params.id as string);
 
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: 'User deleted successfully.',
-    data: result
+    message: "User deleted successfully.",
+    data: result,
   });
 });
 
@@ -101,5 +112,5 @@ export const UserController = {
   getAllUsers,
   getUserById,
   updateUser,
-  deleteUser
+  deleteUser,
 };
