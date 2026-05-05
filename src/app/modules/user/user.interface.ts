@@ -14,8 +14,14 @@ export interface IBaseUserPayload {
 
 export interface ISurferRegisterPayload extends IBaseUserPayload {}
 
+export interface ISocialAccount {
+  platform: string; // "Instagram"
+  url: string; // "https://instagram.com/username"
+}
+
 export interface IPhotographerRegisterPayload extends IBaseUserPayload {
   paypalEmail: string;
+  socialAccounts?: ISocialAccount[];
 }
 
 export interface IModeratorRegisterPayload extends IBaseUserPayload {
@@ -37,6 +43,7 @@ export interface IUserResponse {
   phoneNumber?: string | null;
   paypalEmail?: string | null;
   permissions?: ModeratorPermission[];
+  socialAccounts?: ISocialAccount[];
 }
 
 export interface ILoginResponse {

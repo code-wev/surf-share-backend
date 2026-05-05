@@ -44,6 +44,14 @@ const registerPhotographer = z.object({
         .trim()
         .email("Paypal email must be a valid email address.")
         .transform((v) => v.toLowerCase()),
+      socialAccounts: z
+        .array(
+          z.object({
+            platform: z.string().min(1, "Platform name is required."),
+            url: z.string().url("Must be a valid URL."),
+          }),
+        )
+        .optional(),
     })
     .strict(),
 });
@@ -84,6 +92,27 @@ const updateUser = z.object({
       phoneNumber: z.string().optional(),
       paypalEmail: z.string().email().optional(),
       permissions: z.array(ModeratorPermissionEnum).optional(),
+      socialAccounts: z
+        .array(
+          z.object({
+            platform: z.string().min(1),
+            url: z.string().url(),
+          }),
+        )
+        .optional(),
+    })
+    .strict(),
+});
+
+// Forgot Password Validation
+const forgotPassword = z.object({
+  body: z
+    .object({
+      email: z
+        .string({ message: "Email is required." })
+        .trim()
+        .email("Email must be a valid email address.")
+        .transform((v) => v.toLowerCase()),
     })
     .strict(),
 });
@@ -92,6 +121,7 @@ export const UserValidation = {
   registerSurfer,
   registerPhotographer,
   registerModerator,
+  forgotPassword,
   login,
   updateUser,
 };

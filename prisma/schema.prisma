@@ -18,6 +18,9 @@ model User {
   
   // Specific to PHOTOGRAPHER
   paypalEmail        String?
+
+  // Specific to CONTRIBUTOR/PHOTOGRAPHER
+  socialAccount      Json?
   
   // Specific to MODERATOR
   permissions        ModeratorPermission[]
