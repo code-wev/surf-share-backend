@@ -6,6 +6,28 @@ import { AuthValidation } from "./auth.validation";
 
 const router = Router();
 
+router.post(
+  "/register/surfer",
+  validateRequest(AuthValidation.registerSurfer),
+  AuthController.registerSurfer,
+);
+router.post(
+  "/register/photographer",
+  validateRequest(AuthValidation.registerPhotographer),
+  AuthController.registerPhotographer,
+);
+router.post(
+  "/register/moderator",
+  validateRequest(AuthValidation.registerModerator),
+  AuthController.registerModerator,
+);
+
+router.post(
+  "/login",
+  validateRequest(AuthValidation.login),
+  AuthController.loginUser,
+);
+
 // Forgot Password - Send OTP
 router.post(
   "/forgot-password",
