@@ -1,0 +1,30 @@
+import { Router } from "express";
+
+import validateRequest from "../../middlewares/validateRequest";
+import { AuthController } from "./auth.controller";
+import { AuthValidation } from "./auth.validation";
+
+const router = Router();
+
+// Forgot Password - Send OTP
+router.post(
+  "/forgot-password",
+  validateRequest(AuthValidation.forgotPassword),
+  AuthController.forgotPassword,
+);
+
+// Verify OTP
+router.post(
+  "/verify-otp",
+  validateRequest(AuthValidation.verifyOtp),
+  AuthController.verifyOtp,
+);
+
+// Reset Password
+router.post(
+  "/reset-password",
+  validateRequest(AuthValidation.resetPassword),
+  AuthController.resetPassword,
+);
+
+export const AuthRoutes = router;

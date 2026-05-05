@@ -18,9 +18,18 @@ model User {
   
   // Specific to PHOTOGRAPHER
   paypalEmail        String?
+
+  // Specific to CONTRIBUTOR/PHOTOGRAPHER
+  socialAccount      Json?
   
   // Specific to MODERATOR
   permissions        ModeratorPermission[]
+  
+  // Password reset / OTP
+  otp                String?
+  otpExpiry          DateTime?
+  resetToken         String?
+  resetTokenExpiry   DateTime?
   
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
