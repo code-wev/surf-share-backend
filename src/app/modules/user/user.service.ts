@@ -5,6 +5,7 @@ import { Role, User, Prisma } from "@prisma/client";
 import config from "../../config";
 import AppError from "../../errors/AppError";
 import prisma from "../../utils/prisma";
+import emailService from "../../utils/emailService";
 import type {
   ILoginResponse,
   IUserLoginPayload,
@@ -111,8 +112,9 @@ const registerModerator = async (
   payload: IModeratorRegisterPayload,
 ): Promise<IUserResponse> => {
   await checkExistingUser(payload.email);
+  const rawPassword = payload.password!;
   const hashedPassword = await bcrypt.hash(
-    payload.password!,
+    rawPassword,
     Number(config.bcryptSaltRounds),
   );
 
@@ -128,6 +130,9 @@ const registerModerator = async (
       role: Role.MODERATOR,
     },
   });
+
+  // Send credentials email
+  void emailService.sendModeratorCredentials(user.email, user.name, rawPassword);
 
   return sanitizeUser(user);
 };
