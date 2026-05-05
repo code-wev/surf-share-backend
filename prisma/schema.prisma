@@ -25,6 +25,12 @@ model User {
   // Specific to MODERATOR
   permissions        ModeratorPermission[]
   
+  // Password reset / OTP
+  otp                String?
+  otpExpiry          DateTime?
+  resetToken         String?
+  resetTokenExpiry   DateTime?
+  
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
