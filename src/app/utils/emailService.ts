@@ -32,7 +32,7 @@ class EmailService {
 
       const htmlMessage = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center; color: white;">
+          <div style="background: linear-gradient(135deg, #0c3173 0%, #09a3dc 100%); padding: 20px; text-align: center; color: white;">
             <h1 style="margin: 0;">SurfShare</h1>
           </div>
           
@@ -43,8 +43,8 @@ class EmailService {
               You requested a password reset. Use the OTP below to verify your identity:
             </p>
             
-            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px solid #667eea;">
-              <p style="font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 2px; margin: 0;">
+            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px solid #0c3173;">
+              <p style="font-size: 32px; font-weight: bold; color: #0c3173; letter-spacing: 2px; margin: 0;">
                 ${otp}
               </p>
             </div>
