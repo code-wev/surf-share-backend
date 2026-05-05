@@ -31,6 +31,9 @@ const config = {
     accessSecret: jwtAccessSecret ?? "development-only-secret",
     accessExpiresIn: (process.env.JWT_ACCESS_EXPIRES_IN ??
       "1d") as SignOptions["expiresIn"],
+    refreshSecret: process.env.JWT_REFRESH_SECRET ?? "refresh-secret",
+    refreshExpiresIn: (process.env.JWT_REFRESH_EXPIRES_IN ??
+      "7d") as SignOptions["expiresIn"],
     resetSecret: process.env.JWT_RESET_SECRET ?? "reset-secret",
     resetExpiresIn: (process.env.JWT_RESET_EXPIRES_IN ??
       "15m") as SignOptions["expiresIn"],
@@ -41,6 +44,11 @@ const config = {
     user: process.env.EMAIL_USER ?? "",
     password: process.env.EMAIL_PASSWORD ?? "",
     from: process.env.EMAIL_FROM ?? "noreply@surfshare.com",
+  },
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME ?? "",
+    apiKey: process.env.CLOUDINARY_API_KEY ?? "",
+    apiSecret: process.env.CLOUDINARY_API_SECRET ?? "",
   },
   otp: {
     expiryMinutes: parseNumber(process.env.OTP_EXPIRY_MINUTES, 15),

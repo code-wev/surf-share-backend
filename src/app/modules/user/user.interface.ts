@@ -48,5 +48,6 @@ export interface IUserResponse {
 
 export interface ILoginResponse {
   accessToken: string;
+  refreshToken?: string;
   user: IUserResponse;
 }

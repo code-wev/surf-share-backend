@@ -3,6 +3,7 @@ import { Router } from "express";
 import validateRequest from "../../middlewares/validateRequest";
 import { AuthController } from "./auth.controller";
 import { AuthValidation } from "./auth.validation";
+import { loginRateLimiter, otpRateLimiter } from "../../middlewares/rateLimiter";
 
 const router = Router();
 
@@ -24,6 +25,7 @@ router.post(
 
 router.post(
   "/login",
+  loginRateLimiter,
   validateRequest(AuthValidation.login),
   AuthController.loginUser,
 );
@@ -31,6 +33,7 @@ router.post(
 // Forgot Password - Send OTP
 router.post(
   "/forgot-password",
+  otpRateLimiter,
   validateRequest(AuthValidation.forgotPassword),
   AuthController.forgotPassword,
 );

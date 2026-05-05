@@ -159,6 +159,10 @@ const loginUser = async (
   });
   if (!user) throw new AppError(401, "Invalid email or password.");
 
+  if (user.status === "SUSPENDED") {
+    throw new AppError(403, "Your account is suspended. Please contact support.");
+  }
+
   const isPasswordMatched = await bcrypt.compare(
     payload.password,
     user.password,
@@ -170,7 +174,21 @@ const loginUser = async (
     expiresIn: config.jwt.accessExpiresIn as any,
   });
 
-  return { accessToken, user: sanitizeUser(user) };
+  const refreshToken = jwt.sign(authPayload, config.jwt.refreshSecret as string, {
+    expiresIn: config.jwt.refreshExpiresIn as any,
+  });
+
+  const hashedRefreshToken = await bcrypt.hash(
+    refreshToken,
+    Number(config.bcryptSaltRounds),
+  );
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken: hashedRefreshToken },
+  });
+
+  return { accessToken, refreshToken, user: sanitizeUser(user) };
 };
 
 /**

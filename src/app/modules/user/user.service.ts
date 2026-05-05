@@ -34,7 +34,7 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
 });
 
 const getAllUsers = async (query: Record<string, unknown>) => {
-  const { role, page = 1, limit = 10 } = query;
+  const { role, page, limit = 10, cursor } = query;
 
   // By default, only return Surfers and Photographers
   const filter: Prisma.UserWhereInput = {
@@ -55,26 +55,38 @@ const getAllUsers = async (query: Record<string, unknown>) => {
     }
   }
 
-  const pageNumber = Number(page) || 1;
   const limitNumber = Number(limit) || 10;
-  const skip = (pageNumber - 1) * limitNumber;
+  
+  const queryOptions: Prisma.UserFindManyArgs = {
+    where: filter,
+    orderBy: { createdAt: "desc" },
+    take: limitNumber,
+  };
+
+  let pageNumber = 1;
+
+  if (cursor && typeof cursor === "string") {
+    queryOptions.cursor = { id: cursor };
+    queryOptions.skip = 1;
+  } else if (page) {
+    pageNumber = Number(page) || 1;
+    queryOptions.skip = (pageNumber - 1) * limitNumber;
+  }
 
   const [users, total] = await Promise.all([
-    prisma.user.findMany({
-      where: filter,
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limitNumber,
-    }),
+    prisma.user.findMany(queryOptions),
     prisma.user.count({ where: filter }),
   ]);
 
+  const nextCursor = users.length === limitNumber ? users[users.length - 1].id : null;
+
   return {
     meta: {
-      page: pageNumber,
+      page: cursor ? undefined : pageNumber,
       limit: limitNumber,
       total,
       totalPages: Math.ceil(total / limitNumber),
+      nextCursor
     },
     data: users.map(sanitizeUser),
   };

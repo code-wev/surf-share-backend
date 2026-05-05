@@ -1,5 +1,6 @@
 import type { RequestHandler } from "express";
 
+import config from "../../config";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { AuthService } from "./auth.service";
@@ -44,11 +45,22 @@ const registerModerator: RequestHandler = catchAsync(async (req, res) => {
 const loginUser: RequestHandler = catchAsync(async (req, res) => {
   const result = await AuthService.loginUser(req.body);
 
+  const { refreshToken, ...responseData } = result;
+
+  if (refreshToken) {
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: config.nodeEnv === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+  }
+
   sendResponse(res, {
     statusCode: 200,
     success: true,
     message: "User logged in successfully.",
-    data: result,
+    data: responseData,
   });
 });
 
