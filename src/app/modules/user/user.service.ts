@@ -1,20 +1,7 @@
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { Role, User, Prisma } from "@prisma/client";
-
-import config from "../../config";
 import AppError from "../../errors/AppError";
 import prisma from "../../utils/prisma";
-import emailService from "../../utils/emailService";
-import type {
-  ILoginResponse,
-  IUserLoginPayload,
-  ISurferRegisterPayload,
-  IPhotographerRegisterPayload,
-  IModeratorRegisterPayload,
-  IUserResponse,
-  ISocialAccount,
-} from "./user.interface";
+import type { IUserResponse, ISocialAccount } from "./user.interface";
 
 type UserWithSocialAccount = User & {
   socialAccount?: Prisma.JsonValue | null;
@@ -45,120 +32,6 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
     ? (user.socialAccount as unknown as ISocialAccount[])
     : undefined,
 });
-
-// Check if a user with the given email already exists
-const checkExistingUser = async (email: string) => {
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) {
-    throw new AppError(409, "A user with this email already exists.");
-  }
-};
-
-// Register as Surfer
-const registerSurfer = async (
-  payload: ISurferRegisterPayload,
-): Promise<IUserResponse> => {
-  await checkExistingUser(payload.email);
-  const hashedPassword = await bcrypt.hash(
-    payload.password!,
-    Number(config.bcryptSaltRounds),
-  );
-
-  const user = await prisma.user.create({
-    data: {
-      name: payload.name,
-      email: payload.email,
-      countryName: payload.countryName,
-      address: payload.address,
-      phoneNumber: payload.phoneNumber,
-      password: hashedPassword,
-      role: Role.SURFER,
-    },
-  });
-
-  return sanitizeUser(user);
-};
-
-// Register as Photographer
-const registerPhotographer = async (
-  payload: IPhotographerRegisterPayload,
-): Promise<IUserResponse> => {
-  await checkExistingUser(payload.email);
-  const hashedPassword = await bcrypt.hash(
-    payload.password!,
-    Number(config.bcryptSaltRounds),
-  );
-
-  const user = await prisma.user.create({
-    data: {
-      name: payload.name,
-      email: payload.email,
-      countryName: payload.countryName,
-      address: payload.address,
-      phoneNumber: payload.phoneNumber,
-      paypalEmail: payload.paypalEmail,
-      socialAccount: (payload.socialAccounts ??
-        []) as unknown as Prisma.InputJsonValue,
-      password: hashedPassword,
-      role: Role.PHOTOGRAPHER,
-    },
-  });
-
-  return sanitizeUser(user);
-};
-
-// Register as Moderator
-const registerModerator = async (
-  payload: IModeratorRegisterPayload,
-): Promise<IUserResponse> => {
-  await checkExistingUser(payload.email);
-  const rawPassword = payload.password!;
-  const hashedPassword = await bcrypt.hash(
-    rawPassword,
-    Number(config.bcryptSaltRounds),
-  );
-
-  const user = await prisma.user.create({
-    data: {
-      name: payload.name,
-      email: payload.email,
-      countryName: payload.countryName,
-      address: payload.address,
-      phoneNumber: payload.phoneNumber,
-      permissions: payload.permissions,
-      password: hashedPassword,
-      role: Role.MODERATOR,
-    },
-  });
-
-  // Send credentials email
-  void emailService.sendModeratorCredentials(user.email, user.name, rawPassword);
-
-  return sanitizeUser(user);
-};
-
-// Login
-const loginUser = async (
-  payload: IUserLoginPayload,
-): Promise<ILoginResponse> => {
-  const user = await prisma.user.findUnique({
-    where: { email: payload.email },
-  });
-  if (!user) throw new AppError(401, "Invalid email or password.");
-
-  const isPasswordMatched = await bcrypt.compare(
-    payload.password,
-    user.password,
-  );
-  if (!isPasswordMatched) throw new AppError(401, "Invalid email or password.");
-
-  const authPayload = { userId: user.id, email: user.email, role: user.role };
-  const accessToken = jwt.sign(authPayload, config.jwt.accessSecret as string, {
-    expiresIn: config.jwt.accessExpiresIn as any,
-  });
-
-  return { accessToken, user: sanitizeUser(user) };
-};
 
 const getAllUsers = async (query: Record<string, unknown>) => {
   const { role, page = 1, limit = 10 } = query;
@@ -252,10 +125,6 @@ const deleteUser = async (id: string): Promise<IUserResponse> => {
 };
 
 export const UserService = {
-  registerSurfer,
-  registerPhotographer,
-  registerModerator,
-  loginUser,
   getAllUsers,
   getUserById,
   updateUser,
