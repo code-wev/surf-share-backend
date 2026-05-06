@@ -23,7 +23,13 @@ const createLocation: RequestHandler = catchAsync(async (req, res) => {
     throw new AppError(400, "Preview image is required.");
   }
 
-  const result = await LocationService.createLocation(req.body, file.path);
+  const payload = {
+    ...req.body,
+    latitude: Number(req.body.latitude),
+    longitude: Number(req.body.longitude),
+  };
+
+  const result = await LocationService.createLocation(payload, file.path);
 
   sendResponse(res, {
     statusCode: 201,
@@ -37,7 +43,15 @@ const updateLocation: RequestHandler = catchAsync(async (req, res) => {
   const file = req.file;
   const imageUrl = file?.path;
 
-  const result = await LocationService.updateLocation(req.params.id as string, req.body, imageUrl);
+  const payload = { ...req.body };
+  if (payload.latitude !== undefined) {
+    payload.latitude = Number(payload.latitude);
+  }
+  if (payload.longitude !== undefined) {
+    payload.longitude = Number(payload.longitude);
+  }
+
+  const result = await LocationService.updateLocation(req.params.id as string, payload, imageUrl);
 
   sendResponse(res, {
     statusCode: 200,
