@@ -27,3 +27,8 @@ export interface IResetPasswordResponse {
   success: boolean;
   message: string;
 }
+
+export interface IRefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+}

@@ -30,6 +30,11 @@ router.post(
   AuthController.loginUser,
 );
 
+router.post(
+  "/refresh-token",
+  AuthController.refreshToken
+);
+
 // Forgot Password - Send OTP
 router.post(
   "/forgot-password",

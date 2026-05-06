@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import jwt, { type JwtPayload } from "jsonwebtoken";
 import crypto from "crypto";
 import { Role, Prisma } from "@prisma/client";
 
@@ -14,6 +14,7 @@ import type {
   IVerifyOtpResponse,
   IForgotPasswordResponse,
   IResetPasswordResponse,
+  IRefreshTokenResponse,
 } from "./auth.interface";
 import type {
   ISurferRegisterPayload,
@@ -189,6 +190,58 @@ const loginUser = async (
   });
 
   return { accessToken, refreshToken, user: sanitizeUser(user) };
+};
+
+const refreshToken = async (token: string): Promise<IRefreshTokenResponse> => {
+  try {
+    let decoded: JwtPayload;
+    try {
+      decoded = jwt.verify(token, config.jwt.refreshSecret as string) as JwtPayload;
+    } catch (error) {
+      throw new AppError(401, "Invalid or expired refresh token.");
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
+
+    if (!user || !user.refreshToken) {
+      throw new AppError(401, "Invalid or expired refresh token.");
+    }
+
+    if (user.status === "SUSPENDED") {
+      throw new AppError(403, "Your account is suspended.");
+    }
+
+    const isTokenValid = await bcrypt.compare(token, user.refreshToken);
+    if (!isTokenValid) {
+      throw new AppError(401, "Invalid or expired refresh token.");
+    }
+
+    const authPayload = { userId: user.id, email: user.email, role: user.role };
+    const newAccessToken = jwt.sign(authPayload, config.jwt.accessSecret as string, {
+      expiresIn: config.jwt.accessExpiresIn as any,
+    });
+
+    const newRefreshToken = jwt.sign(authPayload, config.jwt.refreshSecret as string, {
+      expiresIn: config.jwt.refreshExpiresIn as any,
+    });
+
+    const hashedRefreshToken = await bcrypt.hash(
+      newRefreshToken,
+      Number(config.bcryptSaltRounds),
+    );
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: hashedRefreshToken },
+    });
+
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError(500, "Failed to refresh token.");
+  }
 };
 
 /**
@@ -405,6 +458,7 @@ export const AuthService = {
   registerPhotographer,
   registerModerator,
   loginUser,
+  refreshToken,
   forgotPassword,
   verifyOtp,
   resetPassword,

@@ -65,6 +65,37 @@ const loginUser: RequestHandler = catchAsync(async (req, res) => {
 });
 
 /**
+ * Refresh Token
+ */
+const refreshToken: RequestHandler = catchAsync(async (req, res) => {
+  const token = req.cookies.refreshToken;
+  
+  if (!token) {
+    throw new AppError(401, "Refresh token not found.");
+  }
+
+  const result = await AuthService.refreshToken(token);
+
+  if (result.refreshToken) {
+    res.cookie("refreshToken", result.refreshToken, {
+      httpOnly: true,
+      secure: config.nodeEnv === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+  }
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Token refreshed successfully.",
+    data: {
+      accessToken: result.accessToken
+    },
+  });
+});
+
+/**
  * Forgot Password - Send OTP
  */
 const forgotPassword: RequestHandler = catchAsync(async (req, res) => {
