@@ -54,6 +54,24 @@ model Advertisement {
   @@map("advertisements")
 }
 
+model Location {
+  id              String   @id @default(uuid())
+  name            String
+  parentSpot      String?
+  region          String
+  state           String
+  latitude        Float
+  longitude       Float
+  photosAvailable Int      @default(0)
+  previewImage    String   // Cloudinary URL
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([name, region, state])
+  @@map("locations")
+}
+
 enum UserStatus {
   ACTIVE
   SUSPENDED
