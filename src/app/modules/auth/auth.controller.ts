@@ -4,6 +4,7 @@ import config from "../../config";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { AuthService } from "./auth.service";
+import AppError from "../../errors/AppError";
 
 // Register as Surfer
 const registerSurfer: RequestHandler = catchAsync(async (req, res) => {
@@ -144,6 +145,7 @@ export const AuthController = {
   registerPhotographer,
   registerModerator,
   loginUser,
+  refreshToken,
   forgotPassword,
   verifyOtp,
   resetPassword,
