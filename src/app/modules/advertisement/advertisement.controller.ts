@@ -19,11 +19,7 @@ const upsertAdvertisement: RequestHandler = catchAsync(async (req, res) => {
   const { advertisementURL } = req.body;
   const file = req.file;
 
-  if (!file) {
-    throw new AppError(400, "Advertisement image is required.");
-  }
-
-  const imageUrl = file.path;
+  const imageUrl = file?.path;
 
   const result = await AdvertisementService.upsertAdvertisement(
     imageUrl,

@@ -8,26 +8,35 @@ const getAdvertisement = async (): Promise<Advertisement | null> => {
 };
 
 const upsertAdvertisement = async (
-  imageUrl: string,
+  imageUrl: string | undefined,
   linkUrl: string,
 ): Promise<Advertisement> => {
   const existingAd = await prisma.advertisement.findFirst();
 
   if (existingAd) {
-    // Attempt to delete old image from Cloudinary
-    try {
-      const urlParts = existingAd.imageUrl.split("/");
-      const fileName = urlParts[urlParts.length - 1];
-      const publicId = `surfshare/${fileName.split(".")[0]}`;
-      await cloudinary.uploader.destroy(publicId);
-    } catch (e) {
-      console.error("Failed to delete old image from cloudinary", e);
+    let finalImageUrl = existingAd.imageUrl;
+
+    if (imageUrl) {
+      // Attempt to delete old image from Cloudinary
+      try {
+        const urlParts = existingAd.imageUrl.split("/");
+        const fileName = urlParts[urlParts.length - 1];
+        const publicId = `surfshare/${fileName.split(".")[0]}`;
+        await cloudinary.uploader.destroy(publicId);
+      } catch (e) {
+        console.error("Failed to delete old image from cloudinary", e);
+      }
+      finalImageUrl = imageUrl;
     }
 
     return prisma.advertisement.update({
       where: { id: existingAd.id },
-      data: { imageUrl, linkUrl },
+      data: { imageUrl: finalImageUrl, linkUrl },
     });
+  }
+
+  if (!imageUrl) {
+    throw new AppError(400, "Advertisement image is required for a new advertisement.");
   }
 
   return prisma.advertisement.create({
