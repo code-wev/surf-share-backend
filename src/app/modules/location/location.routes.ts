@@ -7,7 +7,7 @@ import { LocationValidation } from "./location.validation";
 
 const router = Router();
 
-router.get("/", auth("ADMIN", "MODERATOR"), LocationController.getAllLocations);
+router.get("/", LocationController.getAllLocations);
 
 router.post(
   "/",
