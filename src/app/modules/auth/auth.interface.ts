@@ -27,3 +27,13 @@ export interface IResetPasswordResponse {
   success: boolean;
   message: string;
 }
+
+export interface IChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface IChangePasswordResponse {
+  success: boolean;
+  message: string;
+}
