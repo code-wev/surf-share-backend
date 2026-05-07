@@ -28,38 +28,51 @@ class EmailService {
    */
   async sendOtpEmail(email: string, otp: string): Promise<boolean> {
     try {
-      const message = `Your OTP for password reset is: ${otp}\n\nThis OTP will expire in 15 minutes.`;
+      const message = `Your OTP for password reset is: ${otp}. This OTP will expire in 15 minutes.`;
 
       const htmlMessage = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #0c3173 0%, #09a3dc 100%); padding: 20px; text-align: center; color: white;">
-            <h1 style="margin: 0;">SurfShare</h1>
-          </div>
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 6px; overflow: hidden; box-shadow: 0 10px 30px rgba(12, 49, 115, 0.08);">
           
-          <div style="padding: 30px; background-color: #f8f9fa;">
-            <p style="color: #333; font-size: 16px;">Hello,</p>
-            
-            <p style="color: #666; font-size: 14px; line-height: 1.6;">
-              You requested a password reset. Use the OTP below to verify your identity:
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #0c3173 0%, #1e4d9c 100%); padding: 40px 30px; text-align: center; color: white;">
+            <h1 style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">SurfShare</h1>
+            <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 15px;">Reset Your Password</p>
+          </div>
+
+          <!-- Body -->
+          <div style="padding: 50px 40px; text-align: center; background: #ffffff;">
+            <p style="font-size: 17px; color: #333333; margin: 0 0 12px 0;">
+              Hello,
             </p>
             
-            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; border: 2px solid #0c3173;">
-              <p style="font-size: 32px; font-weight: bold; color: #0c3173; letter-spacing: 2px; margin: 0;">
+            <p style="color: #555555; font-size: 15.5px; line-height: 1.65; max-width: 460px; margin: 0 auto 35px auto;">
+              You have requested to reset your password. Use the verification code below to proceed.
+            </p>
+
+            <!-- OTP Box -->
+            <div style="background: #f8fafc; border: 2px solid #0c3173; border-radius: 12px; padding: 28px; margin: 30px auto; max-width: 280px;">
+              <p style="margin: 0 0 8px 0; color: #64748b; font-size: 13px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">
+                VERIFICATION CODE
+              </p>
+              <p style="font-size: 42px; font-weight: 700; color: #0c3173; letter-spacing: 8px; margin: 0; font-family: monospace;">
                 ${otp}
               </p>
             </div>
-            
-            <p style="color: #999; font-size: 12px; text-align: center;">
-              ⏱️ This OTP will expire in 15 minutes
+
+            <p style="color: #e11d48; font-size: 14.5px; font-weight: 600; margin: 20px 0 35px 0;">
+              This code expires in 15 minutes
             </p>
-            
-            <p style="color: #666; font-size: 14px; line-height: 1.6; margin-top: 20px;">
-              If you didn't request this, please ignore this email.
+
+            <p style="color: #64748b; font-size: 14.5px; line-height: 1.7;">
+              If you didn't request a password reset, please ignore this email or contact support if you have concerns.
             </p>
           </div>
-          
-          <div style="background: #f0f0f0; padding: 20px; text-align: center; font-size: 12px; color: #999;">
-            <p style="margin: 0;">© 2026 SurfShare. All rights reserved.</p>
+
+          <!-- Footer -->
+          <div style="background: #f8fafc; padding: 32px 40px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0; color: #94a3b8; font-size: 13px;">
+              © 2026 SurfShare. All rights reserved.<br>
+            </p>
           </div>
         </div>
       `;
@@ -81,35 +94,67 @@ class EmailService {
   /**
    * Send Moderator Credentials email
    */
-  async sendModeratorCredentials(email: string, name: string, tempPassword: string): Promise<boolean> {
+  async sendModeratorCredentials(
+    email: string,
+    name: string,
+    tempPassword: string,
+  ): Promise<boolean> {
     try {
       const message = `Hello ${name},\n\nYou have been added as a Moderator to SurfShare. Your temporary login credentials are:\n\nEmail: ${email}\nPassword: ${tempPassword}\n\nPlease log in and change your password immediately.`;
 
       const htmlMessage = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #163C86 0%, #0C3173 100%); padding: 20px; text-align: center; color: white;">
-            <h1 style="margin: 0;">Welcome to SurfShare!</h1>
-          </div>
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #ffffff; border-radius: 6px; overflow: hidden; box-shadow: 0 10px 30px rgba(12, 49, 115, 0.08);">
           
-          <div style="padding: 30px; background-color: #f8f9fa;">
-            <p style="color: #333; font-size: 16px;">Hello ${name},</p>
-            
-            <p style="color: #666; font-size: 14px; line-height: 1.6;">
-              You have been successfully added as a <strong>Moderator</strong> to SurfShare. Below are your temporary login credentials:
+          <!-- Header -->
+          <div style="background: linear-gradient(135deg, #0c3173 0%, #1e4d9c 100%); padding: 40px 30px; text-align: center; color: white;">
+            <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Welcome to SurfShare</h1>
+            <p style="margin: 10px 0 0 0; opacity: 0.95; font-size: 16px;">Invitation to Moderator Account</p>
+          </div>
+
+          <!-- Body -->
+          <div style="padding: 50px 40px; background: #ffffff;">
+            <p style="font-size: 17px; color: #1e2937; margin: 0 0 10px 0;">
+              Hello <strong>${name}</strong>,
             </p>
             
-            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #163C86;">
-              <p style="font-size: 16px; color: #333; margin: 0 0 10px 0;"><strong>Email:</strong> ${email}</p>
-              <p style="font-size: 16px; color: #333; margin: 0;"><strong>Password:</strong> ${tempPassword}</p>
+            <p style="color: #475569; font-size: 15.5px; line-height: 1.7; margin-bottom: 35px;">
+              You have been appointed as a <strong>Moderator</strong> on SurfShare. 
+              Here are your temporary login credentials:
+            </p>
+
+            <!-- Credentials Card -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 32px; margin-bottom: 35px;">
+              <div style="margin-bottom: 20px;">
+                <p style="margin: 0 0 6px 0; color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                  EMAIL ADDRESS
+                </p>
+                <p style="margin: 0; font-size: 17px; color: #0f172a; font-weight: 500;">${email}</p>
+              </div>
+              
+              <div>
+                <p style="margin: 0 0 6px 0; color: #64748b; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                  TEMPORARY PASSWORD
+                </p>
+                <p style="margin: 0; font-size: 17px; color: #0f172a; font-weight: 500; font-family: monospace; letter-spacing: 1px;">${tempPassword}</p>
+              </div>
             </div>
-            
-            <p style="color: #e53e3e; font-size: 14px; font-weight: bold; text-align: center; margin-top: 20px;">
-              ⚠️ IMPORTANT: Please change your password immediately after logging in for the first time.
+
+            <div style="background: #fef3c7; border: 1px solid #facc15; border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 35px;">
+              <p style="color: #854d0e; font-size: 15px; font-weight: 600; margin: 0;">
+                Please change your password immediately after your first login for security reasons.
+              </p>
+            </div>
+
+            <p style="color: #64748b; font-size: 14.5px; line-height: 1.7; text-align: center;">
+              Thank you for joining the SurfShare moderation team.<br>
+              We're excited to have you help maintain our community.
             </p>
           </div>
-          
-          <div style="background: #f0f0f0; padding: 20px; text-align: center; font-size: 12px; color: #999;">
-            <p style="margin: 0;">© 2026 SurfShare. All rights reserved.</p>
+
+          <!-- Footer -->
+          <div style="background: #f8fafc; padding: 32px 40px; text-align: center; border-top: 1px solid #e2e8f0;">
+            <p style="margin: 0; color: #94a3b8; font-size: 13px;">
+              © 2026 SurfShare. All rights reserved.<br>
           </div>
         </div>
       `;
