@@ -114,6 +114,17 @@ const resetPassword = z.object({
     .strict(),
 });
 
+const changePassword = z.object({
+  body: z
+    .object({
+      currentPassword: z.string({ message: "Current password is required." }),
+      newPassword: z
+        .string({ message: "New password is required." })
+        .min(8, "Password must be at least 8 characters long."),
+    })
+    .strict(),
+});
+
 export const AuthValidation = {
   registerSurfer,
   registerPhotographer,
@@ -122,4 +133,5 @@ export const AuthValidation = {
   forgotPassword,
   verifyOtp,
   resetPassword,
+  changePassword,
 };
