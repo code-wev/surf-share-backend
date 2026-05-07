@@ -1,19 +1,7 @@
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import { Role, User, Prisma } from "@prisma/client";
-
-import config from "../../config";
 import AppError from "../../errors/AppError";
 import prisma from "../../utils/prisma";
-import type {
-  ILoginResponse,
-  IUserLoginPayload,
-  ISurferRegisterPayload,
-  IPhotographerRegisterPayload,
-  IModeratorRegisterPayload,
-  IUserResponse,
-  ISocialAccount,
-} from "./user.interface";
+import type { IUserResponse, ISocialAccount } from "./user.interface";
 
 type UserWithSocialAccount = User & {
   socialAccount?: Prisma.JsonValue | null;
@@ -45,118 +33,8 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
     : undefined,
 });
 
-// Check if a user with the given email already exists
-const checkExistingUser = async (email: string) => {
-  const existingUser = await prisma.user.findUnique({ where: { email } });
-  if (existingUser) {
-    throw new AppError(409, "A user with this email already exists.");
-  }
-};
-
-// Register as Surfer
-const registerSurfer = async (
-  payload: ISurferRegisterPayload,
-): Promise<IUserResponse> => {
-  await checkExistingUser(payload.email);
-  const hashedPassword = await bcrypt.hash(
-    payload.password!,
-    Number(config.bcryptSaltRounds),
-  );
-
-  const user = await prisma.user.create({
-    data: {
-      name: payload.name,
-      email: payload.email,
-      countryName: payload.countryName,
-      address: payload.address,
-      phoneNumber: payload.phoneNumber,
-      password: hashedPassword,
-      role: Role.SURFER,
-    },
-  });
-
-  return sanitizeUser(user);
-};
-
-// Register as Photographer
-const registerPhotographer = async (
-  payload: IPhotographerRegisterPayload,
-): Promise<IUserResponse> => {
-  await checkExistingUser(payload.email);
-  const hashedPassword = await bcrypt.hash(
-    payload.password!,
-    Number(config.bcryptSaltRounds),
-  );
-
-  const user = await prisma.user.create({
-    data: {
-      name: payload.name,
-      email: payload.email,
-      countryName: payload.countryName,
-      address: payload.address,
-      phoneNumber: payload.phoneNumber,
-      paypalEmail: payload.paypalEmail,
-      socialAccount: (payload.socialAccounts ??
-        []) as unknown as Prisma.InputJsonValue,
-      password: hashedPassword,
-      role: Role.PHOTOGRAPHER,
-    },
-  });
-
-  return sanitizeUser(user);
-};
-
-// Register as Moderator
-const registerModerator = async (
-  payload: IModeratorRegisterPayload,
-): Promise<IUserResponse> => {
-  await checkExistingUser(payload.email);
-  const hashedPassword = await bcrypt.hash(
-    payload.password!,
-    Number(config.bcryptSaltRounds),
-  );
-
-  const user = await prisma.user.create({
-    data: {
-      name: payload.name,
-      email: payload.email,
-      countryName: payload.countryName,
-      address: payload.address,
-      phoneNumber: payload.phoneNumber,
-      permissions: payload.permissions,
-      password: hashedPassword,
-      role: Role.MODERATOR,
-    },
-  });
-
-  return sanitizeUser(user);
-};
-
-// Login
-const loginUser = async (
-  payload: IUserLoginPayload,
-): Promise<ILoginResponse> => {
-  const user = await prisma.user.findUnique({
-    where: { email: payload.email },
-  });
-  if (!user) throw new AppError(401, "Invalid email or password.");
-
-  const isPasswordMatched = await bcrypt.compare(
-    payload.password,
-    user.password,
-  );
-  if (!isPasswordMatched) throw new AppError(401, "Invalid email or password.");
-
-  const authPayload = { userId: user.id, email: user.email, role: user.role };
-  const accessToken = jwt.sign(authPayload, config.jwt.accessSecret as string, {
-    expiresIn: config.jwt.accessExpiresIn as any,
-  });
-
-  return { accessToken, user: sanitizeUser(user) };
-};
-
 const getAllUsers = async (query: Record<string, unknown>) => {
-  const { role, page = 1, limit = 10 } = query;
+  const { role, page, limit = 10, cursor } = query;
 
   // By default, only return Surfers and Photographers
   const filter: Prisma.UserWhereInput = {
@@ -170,31 +48,45 @@ const getAllUsers = async (query: Record<string, unknown>) => {
       filter.role = Role.PHOTOGRAPHER;
     } else if (role === "Surfers" || role.toUpperCase() === "SURFER") {
       filter.role = Role.SURFER;
+    } else if (role.toUpperCase() === 'MODERATOR' || role === 'Moderators') {
+      filter.role = Role.MODERATOR;
+    } else if (role.toUpperCase() === 'ADMIN' || role === 'Admins') {
+      filter.role = Role.ADMIN;
     }
-    // Any other role queries (like ADMIN or MODERATOR) will be ignored,
-    // falling back to the safe default of only SURFER and PHOTOGRAPHER.
   }
 
-  const pageNumber = Number(page) || 1;
   const limitNumber = Number(limit) || 10;
-  const skip = (pageNumber - 1) * limitNumber;
+  
+  const queryOptions: Prisma.UserFindManyArgs = {
+    where: filter,
+    orderBy: { createdAt: "desc" },
+    take: limitNumber,
+  };
+
+  let pageNumber = 1;
+
+  if (cursor && typeof cursor === "string") {
+    queryOptions.cursor = { id: cursor };
+    queryOptions.skip = 1;
+  } else if (page) {
+    pageNumber = Number(page) || 1;
+    queryOptions.skip = (pageNumber - 1) * limitNumber;
+  }
 
   const [users, total] = await Promise.all([
-    prisma.user.findMany({
-      where: filter,
-      orderBy: { createdAt: "desc" },
-      skip,
-      take: limitNumber,
-    }),
+    prisma.user.findMany(queryOptions),
     prisma.user.count({ where: filter }),
   ]);
 
+  const nextCursor = users.length === limitNumber ? users[users.length - 1].id : null;
+
   return {
     meta: {
-      page: pageNumber,
+      page: cursor ? undefined : pageNumber,
       limit: limitNumber,
       total,
       totalPages: Math.ceil(total / limitNumber),
+      nextCursor
     },
     data: users.map(sanitizeUser),
   };
@@ -245,10 +137,6 @@ const deleteUser = async (id: string): Promise<IUserResponse> => {
 };
 
 export const UserService = {
-  registerSurfer,
-  registerPhotographer,
-  registerModerator,
-  loginUser,
   getAllUsers,
   getUserById,
   updateUser,

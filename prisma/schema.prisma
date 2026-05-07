@@ -12,6 +12,7 @@ model User {
   email              String                @unique
   password           String
   role               Role                  @default(SURFER)
+  status             UserStatus            @default(ACTIVE)
   countryName        String?
   address            String?
   phoneNumber        String?
@@ -30,11 +31,22 @@ model User {
   otpExpiry          DateTime?
   resetToken         String?
   resetTokenExpiry   DateTime?
+
+  // Auth
+  refreshToken       String?
   
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
+  @@index([role])
+  @@index([status])
+  @@index([createdAt])
   @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
 }
 
 enum Role {

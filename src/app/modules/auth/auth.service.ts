@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { Role, Prisma } from "@prisma/client";
 
 import config from "../../config";
 import AppError from "../../errors/AppError";
@@ -14,6 +15,28 @@ import type {
   IForgotPasswordResponse,
   IResetPasswordResponse,
 } from "./auth.interface";
+import type {
+  ISurferRegisterPayload,
+  IPhotographerRegisterPayload,
+  IModeratorRegisterPayload,
+  IUserLoginPayload,
+  ILoginResponse,
+  IUserResponse,
+} from "../user/user.interface";
+
+// Helper function to sanitize user data before sending it in responses
+const sanitizeUser = (user: any): IUserResponse => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  countryName: user.countryName,
+  address: user.address,
+  phoneNumber: user.phoneNumber,
+  paypalEmail: user.paypalEmail,
+  permissions: user.permissions as any,
+  socialAccounts: user.socialAccount || undefined,
+});
 
 /**
  * Generate a random 6-digit OTP
@@ -34,6 +57,138 @@ const hashOTP = async (otp: string): Promise<string> => {
  */
 const compareOTP = async (otp: string, hashedOTP: string): Promise<boolean> => {
   return bcrypt.compare(otp, hashedOTP);
+};
+
+// Check if a user with the given email already exists
+const checkExistingUser = async (email: string) => {
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+  if (existingUser) {
+    throw new AppError(409, "A user with this email already exists.");
+  }
+};
+
+// Register as Surfer
+const registerSurfer = async (
+  payload: ISurferRegisterPayload,
+): Promise<IUserResponse> => {
+  await checkExistingUser(payload.email);
+  const hashedPassword = await bcrypt.hash(
+    payload.password!,
+    Number(config.bcryptSaltRounds),
+  );
+
+  const user = await prisma.user.create({
+    data: {
+      name: payload.name,
+      email: payload.email,
+      countryName: payload.countryName,
+      address: payload.address,
+      phoneNumber: payload.phoneNumber,
+      password: hashedPassword,
+      role: Role.SURFER,
+    },
+  });
+
+  return sanitizeUser(user);
+};
+
+// Register as Photographer
+const registerPhotographer = async (
+  payload: IPhotographerRegisterPayload,
+): Promise<IUserResponse> => {
+  await checkExistingUser(payload.email);
+  const hashedPassword = await bcrypt.hash(
+    payload.password!,
+    Number(config.bcryptSaltRounds),
+  );
+
+  const user = await prisma.user.create({
+    data: {
+      name: payload.name,
+      email: payload.email,
+      countryName: payload.countryName,
+      address: payload.address,
+      phoneNumber: payload.phoneNumber,
+      paypalEmail: payload.paypalEmail,
+      socialAccount: (payload.socialAccounts ??
+        []) as unknown as Prisma.InputJsonValue,
+      password: hashedPassword,
+      role: Role.PHOTOGRAPHER,
+    },
+  });
+
+  return sanitizeUser(user);
+};
+
+// Register as Moderator
+const registerModerator = async (
+  payload: IModeratorRegisterPayload,
+): Promise<IUserResponse> => {
+  await checkExistingUser(payload.email);
+  const rawPassword = payload.password!;
+  const hashedPassword = await bcrypt.hash(
+    rawPassword,
+    Number(config.bcryptSaltRounds),
+  );
+
+  const user = await prisma.user.create({
+    data: {
+      name: payload.name,
+      email: payload.email,
+      countryName: payload.countryName,
+      address: payload.address,
+      phoneNumber: payload.phoneNumber,
+      permissions: payload.permissions,
+      password: hashedPassword,
+      role: Role.MODERATOR,
+    },
+  });
+
+  // Send credentials email
+  void emailService.sendModeratorCredentials(user.email, user.name, rawPassword);
+
+  return sanitizeUser(user);
+};
+
+// Login
+const loginUser = async (
+  payload: IUserLoginPayload,
+): Promise<ILoginResponse> => {
+  const user = await prisma.user.findUnique({
+    where: { email: payload.email },
+  });
+  if (!user) throw new AppError(401, "Invalid email or password.");
+
+  if (user.status === "SUSPENDED") {
+    throw new AppError(403, "Your account is suspended. Please contact support.");
+  }
+
+  const isPasswordMatched = await bcrypt.compare(
+    payload.password,
+    user.password,
+  );
+  if (!isPasswordMatched) throw new AppError(401, "Invalid email or password.");
+
+  const authPayload = { userId: user.id, email: user.email, role: user.role };
+  const accessToken = jwt.sign(authPayload, config.jwt.accessSecret as string, {
+    expiresIn: config.jwt.accessExpiresIn as any,
+  });
+
+  const refreshToken = jwt.sign(authPayload, config.jwt.refreshSecret as string, {
+    expiresIn: config.jwt.refreshExpiresIn as any,
+  });
+
+  const hashedRefreshToken = await bcrypt.hash(
+    refreshToken,
+    Number(config.bcryptSaltRounds),
+  );
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken: hashedRefreshToken },
+  });
+
+  return { accessToken, refreshToken, user: sanitizeUser(user) };
 };
 
 /**
@@ -246,6 +401,10 @@ const resetPassword = async (
 };
 
 export const AuthService = {
+  registerSurfer,
+  registerPhotographer,
+  registerModerator,
+  loginUser,
   forgotPassword,
   verifyOtp,
   resetPassword,
