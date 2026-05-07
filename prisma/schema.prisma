@@ -35,6 +35,8 @@ model User {
   // Auth
   refreshToken       String?
   
+  photos             Photo[]
+  
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
 
@@ -65,11 +67,40 @@ model Location {
   photosAvailable Int      @default(0)
   previewImage    String   // Cloudinary URL
 
+  photos          Photo[]
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([name, region, state])
   @@map("locations")
+}
+
+model Photo {
+  id             String      @id @default(uuid())
+  imageUrl       String
+  price          Float
+  status         PhotoStatus @default(PENDING)
+  
+  photographerId String
+  photographer   User        @relation(fields: [photographerId], references: [id])
+  
+  locationId     String
+  location       Location    @relation(fields: [locationId], references: [id])
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([photographerId])
+  @@index([locationId])
+  @@index([status])
+  @@map("photos")
+}
+
+enum PhotoStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum UserStatus {
