@@ -140,6 +140,26 @@ const resetPassword: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+/**
+ * Change Password
+ */
+const changePassword: RequestHandler = catchAsync(async (req, res) => {
+  const userId = (req as any).user?.userId;
+
+  if (!userId) {
+    throw new Error("User ID not found in request.");
+  }
+
+  const result = await AuthService.changePassword(userId, req.body);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: result.message,
+    data: result,
+  });
+});
+
 export const AuthController = {
   registerSurfer,
   registerPhotographer,
@@ -149,4 +169,5 @@ export const AuthController = {
   forgotPassword,
   verifyOtp,
   resetPassword,
+  changePassword,
 };

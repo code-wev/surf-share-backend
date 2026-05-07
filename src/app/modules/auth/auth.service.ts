@@ -11,10 +11,12 @@ import type {
   IForgotPasswordPayload,
   IVerifyOtpPayload,
   IResetPasswordPayload,
+  IChangePasswordPayload,
   IVerifyOtpResponse,
   IForgotPasswordResponse,
   IResetPasswordResponse,
   IRefreshTokenResponse,
+  IChangePasswordResponse,
 } from "./auth.interface";
 import type {
   ISurferRegisterPayload,
@@ -146,7 +148,11 @@ const registerModerator = async (
   });
 
   // Send credentials email
-  void emailService.sendModeratorCredentials(user.email, user.name, rawPassword);
+  void emailService.sendModeratorCredentials(
+    user.email,
+    user.name,
+    rawPassword,
+  );
 
   return sanitizeUser(user);
 };
@@ -161,7 +167,10 @@ const loginUser = async (
   if (!user) throw new AppError(401, "Invalid email or password.");
 
   if (user.status === "SUSPENDED") {
-    throw new AppError(403, "Your account is suspended. Please contact support.");
+    throw new AppError(
+      403,
+      "Your account is suspended. Please contact support.",
+    );
   }
 
   const isPasswordMatched = await bcrypt.compare(
@@ -175,9 +184,13 @@ const loginUser = async (
     expiresIn: config.jwt.accessExpiresIn as any,
   });
 
-  const refreshToken = jwt.sign(authPayload, config.jwt.refreshSecret as string, {
-    expiresIn: config.jwt.refreshExpiresIn as any,
-  });
+  const refreshToken = jwt.sign(
+    authPayload,
+    config.jwt.refreshSecret as string,
+    {
+      expiresIn: config.jwt.refreshExpiresIn as any,
+    },
+  );
 
   const hashedRefreshToken = await bcrypt.hash(
     refreshToken,
@@ -453,6 +466,60 @@ const resetPassword = async (
   }
 };
 
+/**
+ * Change Password - for authenticated users
+ */
+const changePassword = async (
+  userId: string,
+  payload: IChangePasswordPayload,
+): Promise<IChangePasswordResponse> => {
+  try {
+    // Find user
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new AppError(404, "User not found.");
+    }
+
+    // Compare current password with user's password
+    const isPasswordMatch = await bcrypt.compare(
+      payload.currentPassword,
+      user.password,
+    );
+
+    if (!isPasswordMatch) {
+      throw new AppError(401, "Current password is incorrect.");
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(
+      payload.newPassword,
+      Number(config.bcryptSaltRounds),
+    );
+
+    // Update password
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    return {
+      success: true,
+      message: "Password changed successfully.",
+    };
+  } catch (error) {
+    if (error instanceof AppError) {
+      throw error;
+    }
+    console.error("Change password error:", error);
+    throw new AppError(500, "Failed to change password.");
+  }
+};
+
 export const AuthService = {
   registerSurfer,
   registerPhotographer,
@@ -462,4 +529,5 @@ export const AuthService = {
   forgotPassword,
   verifyOtp,
   resetPassword,
+  changePassword,
 };

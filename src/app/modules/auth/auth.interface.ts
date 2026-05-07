@@ -32,3 +32,13 @@ export interface IRefreshTokenResponse {
   accessToken: string;
   refreshToken: string;
 }
+
+export interface IChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface IChangePasswordResponse {
+  success: boolean;
+  message: string;
+}

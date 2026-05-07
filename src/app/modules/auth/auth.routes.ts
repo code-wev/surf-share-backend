@@ -1,9 +1,13 @@
 import { Router } from "express";
 
 import validateRequest from "../../middlewares/validateRequest";
+import auth from "../../middlewares/auth";
 import { AuthController } from "./auth.controller";
 import { AuthValidation } from "./auth.validation";
-import { loginRateLimiter, otpRateLimiter } from "../../middlewares/rateLimiter";
+import {
+  loginRateLimiter,
+  otpRateLimiter,
+} from "../../middlewares/rateLimiter";
 
 const router = Router();
 
@@ -55,6 +59,14 @@ router.post(
   "/reset-password",
   validateRequest(AuthValidation.resetPassword),
   AuthController.resetPassword,
+);
+
+// Change Password (requires authentication)
+router.post(
+  "/change-password",
+  auth(),
+  validateRequest(AuthValidation.changePassword),
+  AuthController.changePassword,
 );
 
 export const AuthRoutes = router;
