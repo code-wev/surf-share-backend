@@ -19,4 +19,7 @@ router.post(
 // Get photos uploaded by the authenticated photographer with optional filters
 router.get("/my-uploads", auth("PHOTOGRAPHER"), PhotoController.getMyPhotos);
 
+// Get photos by photographer ID (public/admin)
+router.get("/:photographerId", PhotoController.getPhotosByPhotographerId);
+
 export const PhotoRoutes = router;

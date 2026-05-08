@@ -17,11 +17,17 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
   const locationsArray = Array.isArray(locations) ? locations : [locations];
   const pricesArray = Array.isArray(prices) ? prices : [prices];
 
-  if (files.length !== locationsArray.length || files.length !== pricesArray.length) {
-    throw new AppError(400, "Mismatched data lengths between photos, locations, and prices.");
+  if (
+    files.length !== locationsArray.length ||
+    files.length !== pricesArray.length
+  ) {
+    throw new AppError(
+      400,
+      "Mismatched data lengths between photos, locations, and prices.",
+    );
   }
 
-  const photographerId = req.user!.userId; 
+  const photographerId = req.user!.userId;
 
   const items = files.map((file, index) => ({
     imageUrl: file.path, // Cloudinary URL automatically returned by our storage engine
@@ -41,7 +47,10 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
 const getMyPhotos: RequestHandler = catchAsync(async (req, res) => {
   const photographerId = req.user!.userId;
-  const result = await PhotoService.getMyPhotos(photographerId, req.query as unknown as IPhotoQuery);
+  const result = await PhotoService.getMyPhotos(
+    photographerId,
+    req.query as unknown as IPhotoQuery,
+  );
 
   sendResponse(res, {
     statusCode: 200,
@@ -52,7 +61,34 @@ const getMyPhotos: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const getPhotosByPhotographerId: RequestHandler = catchAsync(
+  async (req, res) => {
+    const rawPhotographerId = req.params.photographerId;
+    const photographerId = Array.isArray(rawPhotographerId)
+      ? rawPhotographerId[0]
+      : rawPhotographerId;
+
+    if (!photographerId) {
+      throw new AppError(400, "Missing photographerId parameter.");
+    }
+
+    const result = await PhotoService.getPhotosByPhotographerId(
+      photographerId,
+      req.query as unknown as IPhotoQuery,
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Photos retrieved successfully.",
+      meta: result.meta,
+      data: result.data,
+    });
+  },
+);
+
 export const PhotoController = {
   uploadPhotos,
   getMyPhotos,
+  getPhotosByPhotographerId,
 };
