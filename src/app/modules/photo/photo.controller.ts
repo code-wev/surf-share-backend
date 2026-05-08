@@ -3,6 +3,7 @@ import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { PhotoService } from "./photo.service";
 import AppError from "../../errors/AppError";
+import type { IPhotoQuery } from "./photo.interface";
 
 const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
   const files = req.files as Express.Multer.File[];
@@ -38,6 +39,20 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const getMyPhotos: RequestHandler = catchAsync(async (req, res) => {
+  const photographerId = req.user!.userId;
+  const result = await PhotoService.getMyPhotos(photographerId, req.query as unknown as IPhotoQuery);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Photos retrieved successfully.",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
 export const PhotoController = {
   uploadPhotos,
+  getMyPhotos,
 };

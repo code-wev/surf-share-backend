@@ -16,4 +16,6 @@ router.post(
   PhotoController.uploadPhotos,
 );
 
+router.get("/my-uploads", auth("PHOTOGRAPHER"), PhotoController.getMyPhotos);
+
 export const PhotoRoutes = router;
