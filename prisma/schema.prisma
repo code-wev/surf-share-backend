@@ -82,6 +82,12 @@ model Photo {
   price          Float
   status         PhotoStatus @default(PENDING)
   
+  // Image metadata
+  width          Int?
+  height         Int?
+  format         String?      // e.g., "jpg", "png"
+  fileSize       Int?         // in bytes
+  
   photographerId String
   photographer   User        @relation(fields: [photographerId], references: [id])
   

@@ -19,6 +19,28 @@ router.post(
 // Get photos uploaded by the authenticated photographer with optional filters
 router.get("/my-uploads", auth("PHOTOGRAPHER"), PhotoController.getMyPhotos);
 
+// Get all photos (moderation)
+router.get("/", auth("ADMIN", "MODERATOR"), PhotoController.getAllPhotos);
+
+// Get photo by ID
+router.get("/detail/:photoId", PhotoController.getPhotoById);
+
+// Update photo status (single)
+router.patch(
+  "/:photoId/status",
+  auth("ADMIN", "MODERATOR"),
+  validateRequest(PhotoValidation.updatePhotoStatus),
+  PhotoController.updatePhotoStatus,
+);
+
+// Update photo status (bulk)
+router.post(
+  "/bulk-status",
+  auth("ADMIN", "MODERATOR"),
+  validateRequest(PhotoValidation.bulkUpdatePhotoStatus),
+  PhotoController.bulkUpdatePhotoStatus,
+);
+
 // Get photos by photographer ID (public/admin)
 router.get("/:photographerId", PhotoController.getPhotosByPhotographerId);
 

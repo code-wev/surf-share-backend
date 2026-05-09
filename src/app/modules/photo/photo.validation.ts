@@ -7,6 +7,21 @@ const uploadPhotos = z.object({
   }),
 });
 
+const updatePhotoStatus = z.object({
+  body: z.object({
+    status: z.enum(["PENDING", "APPROVED", "REJECTED"]),
+  }),
+});
+
+const bulkUpdatePhotoStatus = z.object({
+  body: z.object({
+    photoIds: z.array(z.string()),
+    status: z.enum(["PENDING", "APPROVED", "REJECTED"]),
+  }),
+});
+
 export const PhotoValidation = {
   uploadPhotos,
+  updatePhotoStatus,
+  bulkUpdatePhotoStatus,
 };
