@@ -8,7 +8,9 @@ import sharp from "sharp";
 import { cloudinaryInstance } from "../../utils/upload";
 import { PhotoStatus } from "@prisma/client";
 
-function getTimeOfDay(date: Date): "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" {
+function getTimeOfDay(
+  date: Date,
+): "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" {
   const hours = date.getHours();
   if (hours >= 4 && hours < 8) return "FIRST_LIGHT";
   if (hours >= 8 && hours < 11) return "MORNING";
@@ -27,19 +29,28 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
   const locationsArray = Array.isArray(locations) ? locations : [locations];
   const pricesArray = Array.isArray(prices) ? prices : [prices];
-  const lastModifiedDatesArray = lastModifiedDates 
-    ? (Array.isArray(lastModifiedDates) ? lastModifiedDates : [lastModifiedDates])
+  const lastModifiedDatesArray = lastModifiedDates
+    ? Array.isArray(lastModifiedDates)
+      ? lastModifiedDates
+      : [lastModifiedDates]
     : [];
 
-  if (files.length !== locationsArray.length || files.length !== pricesArray.length) {
-    throw new AppError(400, "Mismatched data lengths between photos, locations, and prices.");
+  if (
+    files.length !== locationsArray.length ||
+    files.length !== pricesArray.length
+  ) {
+    throw new AppError(
+      400,
+      "Mismatched data lengths between photos, locations, and prices.",
+    );
   }
 
-  const photographerId = req.user!.userId; 
+  const photographerId = req.user!.userId;
 
   const uploadPromises = files.map(async (file, index) => {
     let capturedAt: Date | undefined;
-    let timeKey: "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" = "UNKNOWN";
+    let timeKey: "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" =
+      "UNKNOWN";
     let width: number | undefined;
     let height: number | undefined;
     let format: string | undefined;
@@ -49,35 +60,27 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     console.log(`File Name: ${file.originalname}, Size: ${fileSize} bytes`);
 
     try {
-      const metadata = await sharp(file.buffer).metadata();
-      width = metadata.width;
-      height = metadata.height;
-      format = metadata.format;
-      
-      console.log(`Sharp Metadata: width=${width}, height=${height}, format=${format}`);
-      
+      // ✅ Sharp for dimensions only — no re-encoding
+      const sharpMeta = await sharp(file.buffer).metadata();
+      width = sharpMeta.width;
+      height = sharpMeta.height;
+      format = sharpMeta.format;
+
       try {
-        console.log("Attempting to parse EXIF with exifr...");
-        const parsedExif = await exifr.parse(file.buffer);
-        if (parsedExif) {
-          if (parsedExif.DateTimeOriginal) {
-            capturedAt = new Date(parsedExif.DateTimeOriginal);
-            timeKey = getTimeOfDay(capturedAt);
-            console.log(`EXIF DateTimeOriginal: ${capturedAt.toISOString()} -> TimeKey: ${timeKey}`);
-          } else if (parsedExif.CreateDate) {
-            capturedAt = new Date(parsedExif.CreateDate);
-            timeKey = getTimeOfDay(capturedAt);
-            console.log(`EXIF CreateDate: ${capturedAt.toISOString()} -> TimeKey: ${timeKey}`);
-          } else if (parsedExif.ModifyDate) {
-            capturedAt = new Date(parsedExif.ModifyDate);
-            timeKey = getTimeOfDay(capturedAt);
-            console.log(`EXIF ModifyDate: ${capturedAt.toISOString()} -> TimeKey: ${timeKey}`);
-          } else {
-            console.log("exifr parsed metadata, but no DateTimeOriginal, CreateDate, or ModifyDate tags found.");
-          }
-        } else {
-          console.log("exifr returned null/undefined for metadata.");
+        // ✅ Parse EXIF from original buffer — exifr handles WebP/JPEG/HEIC natively
+        const parsedExif = await exifr.parse(file.buffer, {
+          pick: ["DateTimeOriginal", "CreateDate", "ModifyDate"],
+        });
+
+        if (parsedExif?.DateTimeOriginal) {
+          capturedAt = new Date(parsedExif.DateTimeOriginal);
+        } else if (parsedExif?.CreateDate) {
+          capturedAt = new Date(parsedExif.CreateDate);
+        } else if (parsedExif?.ModifyDate) {
+          capturedAt = new Date(parsedExif.ModifyDate);
         }
+
+        if (capturedAt) timeKey = getTimeOfDay(capturedAt);
       } catch (exifError) {
         console.log("exifr parsing failed:", exifError);
       }
@@ -92,10 +95,12 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
       if (!isNaN(parsedDate.getTime())) {
         capturedAt = parsedDate;
         timeKey = getTimeOfDay(capturedAt);
-        console.log(`Fallback Date: ${capturedAt.toISOString()} -> TimeKey: ${timeKey}`);
+        console.log(
+          `Fallback Date: ${capturedAt.toISOString()} -> TimeKey: ${timeKey}`,
+        );
       }
     } else if (!capturedAt) {
-       console.log("No EXIF and no fallback date available.");
+      console.log("No EXIF and no fallback date available.");
     }
 
     console.log("Uploading to Cloudinary...");
@@ -105,7 +110,7 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
         (error, result) => {
           if (error) return reject(error);
           resolve(result);
-        }
+        },
       );
       stream.end(file.buffer);
     });
@@ -149,5 +154,5 @@ const getAllPhotos: RequestHandler = catchAsync(async (req, res) => {
 
 export const PhotoController = {
   uploadPhotos,
-  getAllPhotos
+  getAllPhotos,
 };
