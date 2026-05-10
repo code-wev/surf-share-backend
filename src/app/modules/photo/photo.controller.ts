@@ -7,6 +7,7 @@ import exifr from "exifr";
 import sharp from "sharp";
 import { cloudinaryInstance } from "../../utils/upload";
 import { PhotoStatus } from "@prisma/client";
+import { IPhotoQuery } from "./photo.interface";
 
 function getTimeOfDay(
   date: Date,
@@ -152,7 +153,116 @@ const getAllPhotos: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const getMyPhotos: RequestHandler = catchAsync(async (req, res) => {
+  const photographerId = req.user!.userId;
+  const result = await PhotoService.getMyPhotos(
+    photographerId,
+    req.query as unknown as IPhotoQuery,
+  );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Photos retrieved successfully.",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const getPhotoById: RequestHandler = catchAsync(async (req, res) => {
+  const raw = req.params.photoId;
+  const photoId = Array.isArray(raw) ? raw[0] : raw;
+
+  const result = await PhotoService.getPhotoById(photoId as string);
+
+  if (!result) {
+    throw new AppError(404, "Photo not found.");
+  }
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Photo retrieved successfully.",
+    data: result,
+  });
+});
+
+const getPhotosByPhotographerId: RequestHandler = catchAsync(
+  async (req, res) => {
+    const rawPhotographerId = req.params.photographerId;
+    const photographerId = Array.isArray(rawPhotographerId)
+      ? rawPhotographerId[0]
+      : rawPhotographerId;
+
+    if (!photographerId) {
+      throw new AppError(400, "Missing photographerId parameter.");
+    }
+
+    const result = await PhotoService.getPhotosByPhotographerId(
+      photographerId,
+      req.query as unknown as IPhotoQuery,
+    );
+
+    sendResponse(res, {
+      statusCode: 200,
+      success: true,
+      message: "Photos retrieved successfully.",
+      meta: result.meta,
+      data: result.data,
+    });
+  },
+);
+
+const updatePhotoStatus: RequestHandler = catchAsync(async (req, res) => {
+  const raw = req.params.photoId;
+  const photoId = Array.isArray(raw) ? raw[0] : raw;
+  const { status } = req.body;
+
+  if (!photoId || !status) {
+    throw new AppError(400, "Missing photoId or status.");
+  }
+
+  const result = await PhotoService.updatePhotoStatus(
+    photoId as string,
+    status as any,
+  );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: `Photo ${status.toLowerCase()} successfully.`,
+    data: result,
+  });
+});
+
+const bulkUpdatePhotoStatus: RequestHandler = catchAsync(async (req, res) => {
+  const { photoIds, status } = req.body;
+
+  if (
+    !photoIds ||
+    !Array.isArray(photoIds) ||
+    photoIds.length === 0 ||
+    !status
+  ) {
+    throw new AppError(400, "Missing photoIds or status.");
+  }
+
+  const result = await PhotoService.bulkUpdatePhotoStatus(photoIds, status);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: `${result.count} photos ${status.toLowerCase()} successfully.`,
+    data: result,
+  });
+});
+
 export const PhotoController = {
   uploadPhotos,
   getAllPhotos,
+  getMyPhotos,
+  getPhotosByPhotographerId,
+  updatePhotoStatus,
+  bulkUpdatePhotoStatus,
+  getPhotoById,
 };

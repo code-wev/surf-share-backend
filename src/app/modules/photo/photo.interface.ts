@@ -1,3 +1,5 @@
+import { PhotoStatus } from "@prisma/client";
+
 export interface IPhotoBulkItem {
   imageUrl: string;
   locationId: string;
@@ -8,6 +10,13 @@ export interface IPhotoBulkItem {
   height?: number;
   format?: string;
   fileSize?: number;
+}
+
+export interface IPhotoQuery {
+  page?: string;
+  limit?: string;
+  status?: PhotoStatus;
+  locationId?: string;
 }
 
 export interface IPhotoBulkCreatePayload {

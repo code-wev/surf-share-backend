@@ -1,6 +1,6 @@
 import { PhotoStatus, Prisma } from "@prisma/client";
 import prisma from "../../utils/prisma";
-import type { IPhotoBulkItem } from "./photo.interface";
+import type { IPhotoBulkItem, IPhotoQuery } from "./photo.interface";
 
 const bulkCreatePhotos = async (photographerId: string, items: IPhotoBulkItem[]) => {
   const approvedCount = await prisma.photo.count({
@@ -31,6 +31,57 @@ const bulkCreatePhotos = async (photographerId: string, items: IPhotoBulkItem[])
   });
 
   return result;
+};
+
+const getMyPhotos = async (photographerId: string, query: IPhotoQuery) => {
+  const { page = "1", limit = "100", status, locationId } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const where: Prisma.PhotoWhereInput = {
+    photographerId,
+  };
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (locationId) {
+    where.locationId = locationId;
+  }
+
+  const [photos, total] = await Promise.all([
+    prisma.photo.findMany({
+      where,
+      include: {
+        location: {
+          select: {
+            id: true,
+            name: true,
+            state: true,
+            region: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: limitNumber,
+    }),
+    prisma.photo.count({ where }),
+  ]);
+
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPages: Math.ceil(total / limitNumber),
+    },
+    data: photos,
+  };
 };
 
 const getAllPhotos = async (query: Record<string, unknown>) => {
@@ -108,7 +159,105 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
   };
 };
 
+const getPhotosByPhotographerId = async (
+  photographerId: string,
+  query: IPhotoQuery,
+) => {
+  const { page = "1", limit = "100", status, locationId } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const where: Prisma.PhotoWhereInput = {
+    photographerId,
+  };
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (locationId) {
+    where.locationId = locationId;
+  }
+
+  const [photos, total] = await Promise.all([
+    prisma.photo.findMany({
+      where,
+      include: {
+        location: {
+          select: {
+            id: true,
+            name: true,
+            state: true,
+            region: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: limitNumber,
+    }),
+    prisma.photo.count({ where }),
+  ]);
+
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPages: Math.ceil(total / limitNumber),
+    },
+    data: photos,
+  };
+};
+
+const updatePhotoStatus = async (photoId: string, status: PhotoStatus) => {
+  const result = await prisma.photo.update({
+    where: { id: photoId },
+    data: { status },
+  });
+  return result;
+};
+
+const bulkUpdatePhotoStatus = async (
+  photoIds: string[],
+  status: PhotoStatus,
+) => {
+  const result = await prisma.photo.updateMany({
+    where: {
+      id: { in: photoIds },
+    },
+    data: { status },
+  });
+  return result;
+};
+
+const getPhotoById = async (photoId: string) => {
+  const result = await prisma.photo.findUnique({
+    where: { id: photoId },
+    include: {
+      location: true,
+      photographer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+  return result;
+};
+
 export const PhotoService = {
   bulkCreatePhotos,
   getAllPhotos,
+  getMyPhotos,
+  updatePhotoStatus,
+  bulkUpdatePhotoStatus,
+  getPhotoById,
+  getPhotosByPhotographerId,
 };
