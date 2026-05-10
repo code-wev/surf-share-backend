@@ -4,6 +4,7 @@ const uploadPhotos = z.object({
   body: z.object({
     locations: z.union([z.string(), z.array(z.string())]),
     prices: z.union([z.string(), z.array(z.string())]),
+    lastModifiedDates: z.union([z.string(), z.array(z.string())]).optional(),
   }),
 });
 

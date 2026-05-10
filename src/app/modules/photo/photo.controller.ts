@@ -1,13 +1,21 @@
 import type { RequestHandler } from "express";
-import { PhotoStatus } from "@prisma/client";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { PhotoService } from "./photo.service";
 import AppError from "../../errors/AppError";
-import type { IPhotoQuery } from "./photo.interface";
+import exifr from "exifr";
+import sharp from "sharp";
 import { cloudinaryInstance } from "../../utils/upload";
-import url from "url";
-import path from "path";
+import { PhotoStatus } from "@prisma/client";
+
+function getTimeOfDay(date: Date): "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" {
+  const hours = date.getHours();
+  if (hours >= 4 && hours < 8) return "FIRST_LIGHT";
+  if (hours >= 8 && hours < 11) return "MORNING";
+  if (hours >= 11 && hours < 14) return "LUNCH";
+  if (hours >= 14 && hours < 19) return "AFTERNOON";
+  return "UNKNOWN";
+}
 
 const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
   const files = req.files as Express.Multer.File[];
@@ -15,73 +23,108 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     throw new AppError(400, "No photos uploaded.");
   }
 
-  const { locations, prices } = req.body;
+  const { locations, prices, lastModifiedDates } = req.body;
 
-  // Normalize to arrays (if only 1 file is sent, FormData might send a single string instead of array)
   const locationsArray = Array.isArray(locations) ? locations : [locations];
   const pricesArray = Array.isArray(prices) ? prices : [prices];
+  const lastModifiedDatesArray = lastModifiedDates 
+    ? (Array.isArray(lastModifiedDates) ? lastModifiedDates : [lastModifiedDates])
+    : [];
 
-  if (
-    files.length !== locationsArray.length ||
-    files.length !== pricesArray.length
-  ) {
-    throw new AppError(
-      400,
-      "Mismatched data lengths between photos, locations, and prices.",
-    );
+  if (files.length !== locationsArray.length || files.length !== pricesArray.length) {
+    throw new AppError(400, "Mismatched data lengths between photos, locations, and prices.");
   }
 
-  const photographerId = req.user!.userId;
+  const photographerId = req.user!.userId; 
 
-  const items = files.map((file, index) => {
-    const f = file as any;
-    const mimetype: string | undefined = f.mimetype;
-    const format = f.format ?? (mimetype ? mimetype.split("/")[1] : undefined);
+  const uploadPromises = files.map(async (file, index) => {
+    let capturedAt: Date | undefined;
+    let timeKey: "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" = "UNKNOWN";
+    let width: number | undefined;
+    let height: number | undefined;
+    let format: string | undefined;
+    const fileSize = file.size; // from multer memory storage
+
+    console.log(`\n--- Processing File ${index + 1} ---`);
+    console.log(`File Name: ${file.originalname}, Size: ${fileSize} bytes`);
+
+    try {
+      const metadata = await sharp(file.buffer).metadata();
+      width = metadata.width;
+      height = metadata.height;
+      format = metadata.format;
+      
+      console.log(`Sharp Metadata: width=${width}, height=${height}, format=${format}`);
+      
+      try {
+        console.log("Attempting to parse EXIF with exifr...");
+        const parsedExif = await exifr.parse(file.buffer);
+        if (parsedExif) {
+          if (parsedExif.DateTimeOriginal) {
+            capturedAt = new Date(parsedExif.DateTimeOriginal);
+            timeKey = getTimeOfDay(capturedAt);
+            console.log(`EXIF DateTimeOriginal: ${capturedAt.toISOString()} -> TimeKey: ${timeKey}`);
+          } else if (parsedExif.CreateDate) {
+            capturedAt = new Date(parsedExif.CreateDate);
+            timeKey = getTimeOfDay(capturedAt);
+            console.log(`EXIF CreateDate: ${capturedAt.toISOString()} -> TimeKey: ${timeKey}`);
+          } else if (parsedExif.ModifyDate) {
+            capturedAt = new Date(parsedExif.ModifyDate);
+            timeKey = getTimeOfDay(capturedAt);
+            console.log(`EXIF ModifyDate: ${capturedAt.toISOString()} -> TimeKey: ${timeKey}`);
+          } else {
+            console.log("exifr parsed metadata, but no DateTimeOriginal, CreateDate, or ModifyDate tags found.");
+          }
+        } else {
+          console.log("exifr returned null/undefined for metadata.");
+        }
+      } catch (exifError) {
+        console.log("exifr parsing failed:", exifError);
+      }
+    } catch (e) {
+      console.error("Failed to extract metadata:", e);
+    }
+
+    // Fallback to lastModifiedDate from frontend if EXIF is missing
+    if (!capturedAt && lastModifiedDatesArray[index]) {
+      console.log("Falling back to frontend lastModifiedDate...");
+      const parsedDate = new Date(Number(lastModifiedDatesArray[index]));
+      if (!isNaN(parsedDate.getTime())) {
+        capturedAt = parsedDate;
+        timeKey = getTimeOfDay(capturedAt);
+        console.log(`Fallback Date: ${capturedAt.toISOString()} -> TimeKey: ${timeKey}`);
+      }
+    } else if (!capturedAt) {
+       console.log("No EXIF and no fallback date available.");
+    }
+
+    console.log("Uploading to Cloudinary...");
+    const cloudinaryResult = await new Promise<any>((resolve, reject) => {
+      const stream = cloudinaryInstance.uploader.upload_stream(
+        { folder: "surfshare" },
+        (error, result) => {
+          if (error) return reject(error);
+          resolve(result);
+        }
+      );
+      stream.end(file.buffer);
+    });
+    console.log("Cloudinary Upload Success!");
 
     return {
-      imageUrl: f.path, // Cloudinary URL automatically returned by our storage engine
+      imageUrl: cloudinaryResult.secure_url,
       locationId: locationsArray[index],
       price: Number(pricesArray[index]),
-      width: f.width ?? undefined,
-      height: f.height ?? undefined,
-      format: format ?? undefined,
-      fileSize: f.size ?? undefined,
+      timeKey,
+      capturedAt,
+      width,
+      height,
+      format,
+      fileSize,
     };
   });
 
-  // Immediately attempt to fetch Cloudinary resource metadata for each uploaded image
-  for (const item of items) {
-    try {
-      const imageUrl: string = item.imageUrl;
-      const parsed = url.parse(imageUrl);
-      const parts = (parsed.pathname || "").split("/");
-      const uploadIndex = parts.findIndex((p) => p === "upload");
-      if (uploadIndex !== -1) {
-        const afterUpload = parts.slice(uploadIndex + 1);
-        if (afterUpload.length > 0 && /^v\d+$/.test(afterUpload[0])) {
-          afterUpload.shift();
-        }
-        const fileName = afterUpload.join("/");
-        const ext = path.extname(fileName);
-        const publicId = fileName.replace(ext, "");
-
-        if (publicId) {
-          const resource = await cloudinaryInstance.api.resource(publicId, {
-            resource_type: "image",
-          });
-          if (resource) {
-            item.width = resource.width ?? item.width;
-            item.height = resource.height ?? item.height;
-            item.format = resource.format ?? item.format;
-            item.fileSize = resource.bytes ?? item.fileSize;
-          }
-        }
-      }
-    } catch (err) {
-      // ignore metadata fetch failures
-    }
-  }
-
+  const items = await Promise.all(uploadPromises);
   const result = await PhotoService.bulkCreatePhotos(photographerId, items);
 
   sendResponse(res, {
@@ -92,52 +135,8 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
-const getMyPhotos: RequestHandler = catchAsync(async (req, res) => {
-  const photographerId = req.user!.userId;
-  const result = await PhotoService.getMyPhotos(
-    photographerId,
-    req.query as unknown as IPhotoQuery,
-  );
-
-  sendResponse(res, {
-    statusCode: 200,
-    success: true,
-    message: "Photos retrieved successfully.",
-    meta: result.meta,
-    data: result.data,
-  });
-});
-
-const getPhotosByPhotographerId: RequestHandler = catchAsync(
-  async (req, res) => {
-    const rawPhotographerId = req.params.photographerId;
-    const photographerId = Array.isArray(rawPhotographerId)
-      ? rawPhotographerId[0]
-      : rawPhotographerId;
-
-    if (!photographerId) {
-      throw new AppError(400, "Missing photographerId parameter.");
-    }
-
-    const result = await PhotoService.getPhotosByPhotographerId(
-      photographerId,
-      req.query as unknown as IPhotoQuery,
-    );
-
-    sendResponse(res, {
-      statusCode: 200,
-      success: true,
-      message: "Photos retrieved successfully.",
-      meta: result.meta,
-      data: result.data,
-    });
-  },
-);
-
 const getAllPhotos: RequestHandler = catchAsync(async (req, res) => {
-  const result = await PhotoService.getAllPhotos(
-    req.query as unknown as IPhotoQuery,
-  );
+  const result = await PhotoService.getAllPhotos(req.query);
 
   sendResponse(res, {
     statusCode: 200,
@@ -145,77 +144,10 @@ const getAllPhotos: RequestHandler = catchAsync(async (req, res) => {
     message: "Photos retrieved successfully.",
     meta: result.meta,
     data: result.data,
-  });
-});
-
-const getPhotoById: RequestHandler = catchAsync(async (req, res) => {
-  const raw = req.params.photoId;
-  const photoId = Array.isArray(raw) ? raw[0] : raw;
-
-  const result = await PhotoService.getPhotoById(photoId as string);
-
-  if (!result) {
-    throw new AppError(404, "Photo not found.");
-  }
-
-  sendResponse(res, {
-    statusCode: 200,
-    success: true,
-    message: "Photo retrieved successfully.",
-    data: result,
-  });
-});
-
-const updatePhotoStatus: RequestHandler = catchAsync(async (req, res) => {
-  const raw = req.params.photoId;
-  const photoId = Array.isArray(raw) ? raw[0] : raw;
-  const { status } = req.body;
-
-  if (!photoId || !status) {
-    throw new AppError(400, "Missing photoId or status.");
-  }
-
-  const result = await PhotoService.updatePhotoStatus(
-    photoId as string,
-    status as any,
-  );
-
-  sendResponse(res, {
-    statusCode: 200,
-    success: true,
-    message: `Photo ${status.toLowerCase()} successfully.`,
-    data: result,
-  });
-});
-
-const bulkUpdatePhotoStatus: RequestHandler = catchAsync(async (req, res) => {
-  const { photoIds, status } = req.body;
-
-  if (
-    !photoIds ||
-    !Array.isArray(photoIds) ||
-    photoIds.length === 0 ||
-    !status
-  ) {
-    throw new AppError(400, "Missing photoIds or status.");
-  }
-
-  const result = await PhotoService.bulkUpdatePhotoStatus(photoIds, status);
-
-  sendResponse(res, {
-    statusCode: 200,
-    success: true,
-    message: `${result.count} photos ${status.toLowerCase()} successfully.`,
-    data: result,
   });
 });
 
 export const PhotoController = {
   uploadPhotos,
-  getMyPhotos,
-  getPhotosByPhotographerId,
-  getAllPhotos,
-  getPhotoById,
-  updatePhotoStatus,
-  bulkUpdatePhotoStatus,
+  getAllPhotos
 };

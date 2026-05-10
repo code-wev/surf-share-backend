@@ -82,6 +82,10 @@ model Photo {
   price          Float
   status         PhotoStatus @default(PENDING)
   
+  // EXIF and Time of Day
+  timeKey        String      @default("any")
+  capturedAt     DateTime?
+
   // Image metadata
   width          Int?
   height         Int?
@@ -100,6 +104,7 @@ model Photo {
   @@index([photographerId])
   @@index([locationId])
   @@index([status])
+  @@index([timeKey])
   @@map("photos")
 }
 
