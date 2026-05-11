@@ -16,6 +16,7 @@ model User {
   countryName        String?
   address            String?
   phoneNumber        String?
+  profileImageUrl    String?
   
   // Specific to PHOTOGRAPHER
   paypalEmail        String?

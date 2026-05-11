@@ -37,14 +37,16 @@ export interface IUserResponse {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
+  role: string;
   countryName?: string | null;
   address?: string | null;
   phoneNumber?: string | null;
   paypalEmail?: string | null;
-  permissions?: ModeratorPermission[];
+  permissions?: string[] | null;
   socialAccounts?: ISocialAccount[];
+  profileImageUrl?: string | null;
 }
+
 
 export interface ILoginResponse {
   accessToken: string;
