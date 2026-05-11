@@ -85,11 +85,15 @@ const getMyPhotos = async (photographerId: string, query: IPhotoQuery) => {
 };
 
 const getAllPhotos = async (query: Record<string, unknown>) => {
-  const { tab, locationId, timeKey, sort, page = 1, limit = 16 } = query;
+  const { tab, locationId, timeKey, sort, status, page = 1, limit = 16 } = query;
 
-  const filter: Prisma.PhotoWhereInput = {
-    status: PhotoStatus.APPROVED,
-  };
+  const filter: Prisma.PhotoWhereInput = {};
+
+  if (status && typeof status === "string") {
+    filter.status = status as PhotoStatus;
+  } else {
+    filter.status = PhotoStatus.APPROVED; // default for public gallery
+  }
 
   if (locationId && locationId !== "all" && typeof locationId === "string") {
     filter.locationId = locationId;
