@@ -176,7 +176,7 @@ class EmailService {
   /**
    * Send generic email
    */
-  private async sendEmail(options: IEmailOptions): Promise<void> {
+  async sendEmail(options: IEmailOptions): Promise<void> {
     const mailOptions = {
       from: config.email.from,
       to: options.email,

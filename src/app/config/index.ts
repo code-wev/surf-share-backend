@@ -44,6 +44,7 @@ const config = {
     user: process.env.EMAIL_USER ?? "",
     password: process.env.EMAIL_PASSWORD ?? "",
     from: process.env.EMAIL_FROM ?? "noreply@surfshare.com",
+    adminEmail: process.env.ADMIN_EMAIL ?? "admin@surfshare.com",
   },
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME ?? "",
