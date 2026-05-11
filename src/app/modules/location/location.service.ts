@@ -2,7 +2,16 @@ import type { Location, Prisma } from "@prisma/client";
 import { v2 as cloudinary } from "cloudinary";
 import AppError from "../../errors/AppError";
 import prisma from "../../utils/prisma";
-import type { ILocationCreatePayload, ILocationUpdatePayload } from "./location.interface";
+import type {
+  ILocationCreatePayload,
+  ILocationUpdatePayload,
+} from "./location.interface";
+
+type LocationWithPhotoCount = Location & {
+  _count: {
+    photos: number;
+  };
+};
 
 const getAllLocations = async (query: Record<string, unknown>) => {
   const { search, page = 1, limit = 10, cursor } = query;
@@ -18,11 +27,18 @@ const getAllLocations = async (query: Record<string, unknown>) => {
   }
 
   const limitNumber = Number(limit) || 10;
-  
+
   const queryOptions: Prisma.LocationFindManyArgs = {
     where: filter,
     orderBy: { createdAt: "desc" },
     take: limitNumber,
+    include: {
+      _count: {
+        select: {
+          photos: true,
+        },
+      },
+    },
   };
 
   let pageNumber = 1;
@@ -36,11 +52,19 @@ const getAllLocations = async (query: Record<string, unknown>) => {
   }
 
   const [locations, total] = await Promise.all([
-    prisma.location.findMany(queryOptions),
+    prisma.location.findMany(queryOptions) as Promise<LocationWithPhotoCount[]>,
     prisma.location.count({ where: filter }),
   ]);
 
-  const nextCursor = locations.length === limitNumber ? locations[locations.length - 1].id : null;
+  const nextCursor =
+    locations.length === limitNumber
+      ? locations[locations.length - 1].id
+      : null;
+
+  const data = locations.map(({ _count, ...location }) => ({
+    ...location,
+    photosAvailable: _count.photos,
+  }));
 
   return {
     meta: {
@@ -50,11 +74,14 @@ const getAllLocations = async (query: Record<string, unknown>) => {
       totalPages: Math.ceil(total / limitNumber),
       nextCursor,
     },
-    data: locations,
+    data,
   };
 };
 
-const createLocation = async (payload: ILocationCreatePayload, imageUrl: string): Promise<Location> => {
+const createLocation = async (
+  payload: ILocationCreatePayload,
+  imageUrl: string,
+): Promise<Location> => {
   return prisma.location.create({
     data: {
       ...payload,
@@ -63,7 +90,11 @@ const createLocation = async (payload: ILocationCreatePayload, imageUrl: string)
   });
 };
 
-const updateLocation = async (id: string, payload: ILocationUpdatePayload, imageUrl?: string): Promise<Location> => {
+const updateLocation = async (
+  id: string,
+  payload: ILocationUpdatePayload,
+  imageUrl?: string,
+): Promise<Location> => {
   const existingLocation = await prisma.location.findUnique({ where: { id } });
 
   if (!existingLocation) {

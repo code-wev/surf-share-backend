@@ -2,7 +2,10 @@ import { PhotoStatus, Prisma } from "@prisma/client";
 import prisma from "../../utils/prisma";
 import type { IPhotoBulkItem, IPhotoQuery } from "./photo.interface";
 
-const bulkCreatePhotos = async (photographerId: string, items: IPhotoBulkItem[]) => {
+const bulkCreatePhotos = async (
+  photographerId: string,
+  items: IPhotoBulkItem[],
+) => {
   const approvedCount = await prisma.photo.count({
     where: {
       photographerId,
@@ -10,9 +13,10 @@ const bulkCreatePhotos = async (photographerId: string, items: IPhotoBulkItem[])
     },
   });
 
-  const newStatus = approvedCount >= 10 ? PhotoStatus.APPROVED : PhotoStatus.PENDING;
+  const newStatus =
+    approvedCount >= 10 ? PhotoStatus.APPROVED : PhotoStatus.PENDING;
 
-  const photoRecords = items.map(item => ({
+  const photoRecords = items.map((item) => ({
     photographerId,
     imageUrl: item.imageUrl,
     locationId: item.locationId,
@@ -25,10 +29,33 @@ const bulkCreatePhotos = async (photographerId: string, items: IPhotoBulkItem[])
     format: item.format || null,
     fileSize: item.fileSize || null,
   }));
+  const locationPhotoCounts = new Map<string, number>();
 
-  const result = await prisma.photo.createMany({
-    data: photoRecords,
-  });
+  for (const item of items) {
+    const currentCount = locationPhotoCounts.get(item.locationId) ?? 0;
+    locationPhotoCounts.set(item.locationId, currentCount + 1);
+  }
+
+  const transaction = [
+    prisma.photo.createMany({
+      data: photoRecords,
+    }),
+    ...Array.from(locationPhotoCounts.entries()).map(([locationId, count]) =>
+      prisma.location.update({
+        where: { id: locationId },
+        data: {
+          photosAvailable: {
+            increment: count,
+          },
+        },
+      }),
+    ),
+  ];
+
+  const [result] = (await prisma.$transaction(transaction)) as [
+    Prisma.BatchPayload,
+    ...unknown[],
+  ];
 
   return result;
 };
@@ -85,7 +112,15 @@ const getMyPhotos = async (photographerId: string, query: IPhotoQuery) => {
 };
 
 const getAllPhotos = async (query: Record<string, unknown>) => {
-  const { tab, locationId, timeKey, sort, status, page = 1, limit = 16 } = query;
+  const {
+    tab,
+    locationId,
+    timeKey,
+    sort,
+    status,
+    page = 1,
+    limit = 16,
+  } = query;
 
   const filter: Prisma.PhotoWhereInput = {};
 
@@ -106,11 +141,23 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
   if (tab && tab !== "all" && typeof tab === "string") {
     const now = new Date();
     if (tab === "today") {
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfDay = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
       filter.createdAt = { gte: startOfDay };
     } else if (tab === "yesterday") {
-      const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-      const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfYesterday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() - 1,
+      );
+      const endOfYesterday = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
       filter.createdAt = { gte: startOfYesterday, lt: endOfYesterday };
     } else if (tab === "last7days") {
       const last7Days = new Date(now.setDate(now.getDate() - 7));
@@ -133,10 +180,10 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
         select: {
           name: true,
           socialAccount: true,
-        }
+        },
       },
       location: true,
-    }
+    },
   };
 
   if (sort === "priceLow") {
