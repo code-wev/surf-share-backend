@@ -5,6 +5,7 @@ import { AuthRoutes } from "../modules/auth/auth.routes";
 import { AdvertisementRoutes } from "../modules/advertisement/advertisement.routes";
 import { LocationRoutes } from "../modules/location/location.routes";
 import { PhotoRoutes } from "../modules/photo/photo.routes";
+import { FavoriteRoutes } from "../modules/favorite/favorite.routes";
 
 const router = Router();
 
@@ -28,6 +29,10 @@ const moduleRoutes = [
   {
     path: "/photos",
     route: PhotoRoutes,
+  },
+  {
+    path: "/favorites",
+    route: FavoriteRoutes,
   },
 ];
 

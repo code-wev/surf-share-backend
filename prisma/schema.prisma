@@ -36,6 +36,7 @@ model User {
   refreshToken       String?
   
   photos             Photo[]
+  favorites          Favorite[]
   
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
@@ -97,6 +98,8 @@ model Photo {
   
   locationId     String
   location       Location    @relation(fields: [locationId], references: [id])
+  
+  favoritedBy    Favorite[]
 
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
@@ -106,6 +109,22 @@ model Photo {
   @@index([status])
   @@index([timeKey])
   @@map("photos")
+}
+
+model Favorite {
+  id        String   @id @default(uuid())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  photoId   String
+  photo     Photo    @relation(fields: [photoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, photoId])
+  @@index([userId])
+  @@map("favorites")
 }
 
 enum PhotoStatus {
