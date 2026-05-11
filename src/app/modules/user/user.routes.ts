@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import validateRequest from "../../middlewares/validateRequest";
 import auth from "../../middlewares/auth";
+import { upload } from "../../utils/upload";
 import { UserController } from "./user.controller";
 import { UserValidation } from "./user.validation";
 
@@ -17,5 +18,11 @@ router.patch(
   UserController.updateUser,
 );
 router.delete("/:id", auth("ADMIN"), UserController.deleteUser);
+router.patch(
+  "/:id/profile-image",
+  auth(),
+  upload.single("image"),
+  UserController.uploadProfileImage,
+);
 
 export const UserRoutes = router;

@@ -3,6 +3,7 @@ import type { RequestHandler } from "express";
 import catchAsync from "../../utils/catchAsync";
 import sendResponse from "../../utils/sendResponse";
 import { UserService } from "./user.service";
+import AppError from "../../errors/AppError";
 
 // Get all users (with optional role filter)
 const getAllUsers: RequestHandler = catchAsync(async (req, res) => {
@@ -11,9 +12,9 @@ const getAllUsers: RequestHandler = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: 'Users retrieved successfully.',
+    message: "Users retrieved successfully.",
     meta: result.meta,
-    data: result.data
+    data: result.data,
   });
 });
 
@@ -56,9 +57,37 @@ const deleteUser: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const uploadProfileImage: RequestHandler = catchAsync(async (req, res) => {
+  const rawId = req.params.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+  const file = req.file;
+
+  if (!file) {
+    throw new AppError(400, "No image file uploaded.");
+  }
+
+  if (!id) {
+    throw new AppError(400, "Missing user id parameter.");
+  }
+
+  const imageUrl = file.path;
+
+  const updatedUser = await UserService.updateUser(id, {
+    profileImageUrl: imageUrl,
+  });
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Profile image updated successfully.",
+    data: updatedUser,
+  });
+});
+
 export const UserController = {
   getAllUsers,
   getUserById,
   updateUser,
   deleteUser,
+  uploadProfileImage,
 };

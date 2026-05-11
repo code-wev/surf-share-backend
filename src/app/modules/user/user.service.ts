@@ -13,6 +13,7 @@ type IUserUpdatePayload = {
   address?: string;
   phoneNumber?: string;
   paypalEmail?: string;
+  profileImageUrl?: string;
   permissions?: User["permissions"];
   socialAccounts?: ISocialAccount[];
 };
@@ -28,6 +29,7 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
   phoneNumber: user.phoneNumber,
   paypalEmail: user.paypalEmail,
   permissions: user.permissions as any,
+  profileImageUrl: (user as any).profileImageUrl,
   socialAccounts: user.socialAccount
     ? (user.socialAccount as unknown as ISocialAccount[])
     : undefined,
