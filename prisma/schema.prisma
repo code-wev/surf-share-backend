@@ -38,6 +38,7 @@ model User {
   
   photos             Photo[]
   favorites          Favorite[]
+  orders             Order[]
   
   createdAt          DateTime              @default(now())
   updatedAt          DateTime              @updatedAt
@@ -101,6 +102,7 @@ model Photo {
   location       Location    @relation(fields: [locationId], references: [id])
   
   favoritedBy    Favorite[]
+  orderItems     OrderItem[]
 
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
@@ -126,6 +128,46 @@ model Favorite {
   @@unique([userId, photoId])
   @@index([userId])
   @@map("favorites")
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  stripeSessionId String?     @unique
+  totalAmount     Float
+  status          OrderStatus @default(PENDING)
+  
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  
+  items           OrderItem[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  price     Float
+  
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  photoId   String
+  photo     Photo    @relation(fields: [photoId], references: [id])
+
+  @@unique([orderId, photoId])
+  @@index([orderId])
+  @@map("order_items")
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
 }
 
 enum PhotoStatus {

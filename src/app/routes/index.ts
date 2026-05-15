@@ -6,7 +6,7 @@ import { AdvertisementRoutes } from "../modules/advertisement/advertisement.rout
 import { LocationRoutes } from "../modules/location/location.routes";
 import { PhotoRoutes } from "../modules/photo/photo.routes";
 import { FavoriteRoutes } from "../modules/favorite/favorite.routes";
-import { ContactRoutes } from "../modules/contact/contact.routes";
+import { CheckoutRoutes } from "../modules/checkout/checkout.routes";
 
 const router = Router();
 
@@ -36,8 +36,8 @@ const moduleRoutes = [
     route: FavoriteRoutes,
   },
   {
-    path: "/contact",
-    route: ContactRoutes,
+    path: "/checkout",
+    route: CheckoutRoutes,
   },
 ];
 

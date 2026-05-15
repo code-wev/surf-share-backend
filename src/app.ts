@@ -31,7 +31,18 @@ const corsOptions: CorsOptions = {
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(cookieParser());
-app.use(express.json({ limit: "1mb" }));
+
+// Stripe Webhook needs raw body, not parsed JSON
+app.use("/api/v1/checkout/webhook", express.raw({ type: "application/json" }));
+
+app.use((req, res, next) => {
+  if (req.originalUrl === "/api/v1/checkout/webhook") {
+    next();
+  } else {
+    express.json({ limit: "1mb" })(req, res, next);
+  }
+});
+
 app.use(express.urlencoded({ extended: true }));
 
 app.use(
