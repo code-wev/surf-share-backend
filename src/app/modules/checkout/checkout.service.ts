@@ -63,7 +63,6 @@ const createSession = async (userId: string, photoIds: string[]) => {
 
   // 3. Create Stripe Session
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card", "paypal"],
     line_items: lineItems,
     mode: "payment",
     success_url: `${config.stripe.frontendUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -108,7 +107,25 @@ const handleWebhook = async (body: Buffer, signature: string) => {
   return { received: true };
 };
 
+const verifySession = async (sessionId: string) => {
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+  if (session.payment_status === "paid") {
+    const orderId = session.client_reference_id;
+    if (orderId) {
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { status: "PAID" },
+      });
+      return { status: "PAID" };
+    }
+  }
+
+  return { status: session.payment_status };
+};
+
 export const CheckoutService = {
   createSession,
   handleWebhook,
+  verifySession,
 };

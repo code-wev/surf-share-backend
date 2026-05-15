@@ -19,4 +19,10 @@ router.post(
   CheckoutController.stripeWebhook,
 );
 
+router.get(
+  "/verify-session",
+  auth("SURFER", "PHOTOGRAPHER", "MODERATOR", "ADMIN"),
+  CheckoutController.verifySession,
+);
+
 export const CheckoutRoutes = router;
