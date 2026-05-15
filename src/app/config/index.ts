@@ -55,6 +55,11 @@ const config = {
     expiryMinutes: parseNumber(process.env.OTP_EXPIRY_MINUTES, 15),
     maxAttempts: parseNumber(process.env.OTP_MAX_ATTEMPTS, 5),
   },
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY ?? "",
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+    frontendUrl: process.env.FRONTEND_URL ?? "http://localhost:3000",
+  },
 };
 
 export default config;
