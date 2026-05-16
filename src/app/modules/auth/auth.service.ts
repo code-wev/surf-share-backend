@@ -52,8 +52,12 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
   address: user.address,
   phoneNumber: user.phoneNumber,
   paypalEmail: user.paypalEmail,
-  permissions: user.permissions ? (user.permissions as unknown as string[]) : undefined,
-  socialAccounts: user.socialAccount ? (user.socialAccount as unknown as ISocialAccount[]) : undefined,
+  permissions: user.permissions
+    ? (user.permissions as unknown as string[])
+    : undefined,
+  socialAccounts: user.socialAccount
+    ? (user.socialAccount as unknown as ISocialAccount[])
+    : undefined,
   profileImageUrl: user.profileImageUrl ?? null,
 });
 
