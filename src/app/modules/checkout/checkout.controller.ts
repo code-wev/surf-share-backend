@@ -59,9 +59,24 @@ const getPurchasedPhotoIds: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const getPurchasedPhotos: RequestHandler = catchAsync(async (req, res) => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    throw new AppError(401, "User not authenticated.");
+  }
+  const photos = await CheckoutService.getPurchasedPhotos(userId);
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Purchased photos retrieved successfully.",
+    data: photos,
+  });
+});
+
 export const CheckoutController = {
   createSession,
   stripeWebhook,
   verifySession,
   getPurchasedPhotoIds,
+  getPurchasedPhotos,
 };

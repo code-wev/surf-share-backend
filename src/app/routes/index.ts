@@ -7,6 +7,8 @@ import { LocationRoutes } from "../modules/location/location.routes";
 import { PhotoRoutes } from "../modules/photo/photo.routes";
 import { FavoriteRoutes } from "../modules/favorite/favorite.routes";
 import { CheckoutRoutes } from "../modules/checkout/checkout.routes";
+import { ContactRoutes } from "../modules/contact/contact.routes";
+import { OrderRoutes } from "../modules/order/order.routes";
 
 const router = Router();
 
@@ -38,6 +40,14 @@ const moduleRoutes = [
   {
     path: "/checkout",
     route: CheckoutRoutes,
+  },
+  {
+    path: "/contact",
+    route: ContactRoutes,
+  },
+  {
+    path: "/orders",
+    route: OrderRoutes,
   },
 ];
 

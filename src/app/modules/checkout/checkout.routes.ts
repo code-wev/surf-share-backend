@@ -31,4 +31,10 @@ router.get(
   CheckoutController.getPurchasedPhotoIds,
 );
 
+router.get(
+  "/purchased-photos",
+  auth("SURFER", "PHOTOGRAPHER", "MODERATOR", "ADMIN"),
+  CheckoutController.getPurchasedPhotos,
+);
+
 export const CheckoutRoutes = router;

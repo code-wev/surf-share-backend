@@ -25,10 +25,25 @@ import type {
   IUserLoginPayload,
   ILoginResponse,
   IUserResponse,
+  ISocialAccount,
 } from "../user/user.interface";
 
+type UserWithSocialAccount = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  countryName?: string | null;
+  address?: string | null;
+  phoneNumber?: string | null;
+  paypalEmail?: string | null;
+  permissions?: Prisma.JsonValue | null;
+  socialAccount?: Prisma.JsonValue | null;
+  profileImageUrl?: string | null;
+};
+
 // Helper function to sanitize user data before sending it in responses
-const sanitizeUser = (user: any): IUserResponse => ({
+const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
   id: user.id,
   name: user.name,
   email: user.email,
@@ -37,8 +52,13 @@ const sanitizeUser = (user: any): IUserResponse => ({
   address: user.address,
   phoneNumber: user.phoneNumber,
   paypalEmail: user.paypalEmail,
-  permissions: user.permissions as any,
-  socialAccounts: user.socialAccount || undefined,
+  permissions: user.permissions
+    ? (user.permissions as unknown as string[])
+    : undefined,
+  socialAccounts: user.socialAccount
+    ? (user.socialAccount as unknown as ISocialAccount[])
+    : undefined,
+  profileImageUrl: user.profileImageUrl ?? null,
 });
 
 /**
@@ -181,14 +201,14 @@ const loginUser = async (
 
   const authPayload = { userId: user.id, email: user.email, role: user.role };
   const accessToken = jwt.sign(authPayload, config.jwt.accessSecret as string, {
-    expiresIn: config.jwt.accessExpiresIn as any,
+    expiresIn: config.jwt.accessExpiresIn,
   });
 
   const refreshToken = jwt.sign(
     authPayload,
     config.jwt.refreshSecret as string,
     {
-      expiresIn: config.jwt.refreshExpiresIn as any,
+      expiresIn: config.jwt.refreshExpiresIn,
     },
   );
 
@@ -209,7 +229,10 @@ const refreshToken = async (token: string): Promise<IRefreshTokenResponse> => {
   try {
     let decoded: JwtPayload;
     try {
-      decoded = jwt.verify(token, config.jwt.refreshSecret as string) as JwtPayload;
+      decoded = jwt.verify(
+        token,
+        config.jwt.refreshSecret as string,
+      ) as JwtPayload;
     } catch (error) {
       throw new AppError(401, "Invalid or expired refresh token.");
     }
@@ -232,13 +255,21 @@ const refreshToken = async (token: string): Promise<IRefreshTokenResponse> => {
     }
 
     const authPayload = { userId: user.id, email: user.email, role: user.role };
-    const newAccessToken = jwt.sign(authPayload, config.jwt.accessSecret as string, {
-      expiresIn: config.jwt.accessExpiresIn as any,
-    });
+    const newAccessToken = jwt.sign(
+      authPayload,
+      config.jwt.accessSecret as string,
+      {
+        expiresIn: config.jwt.accessExpiresIn,
+      },
+    );
 
-    const newRefreshToken = jwt.sign(authPayload, config.jwt.refreshSecret as string, {
-      expiresIn: config.jwt.refreshExpiresIn as any,
-    });
+    const newRefreshToken = jwt.sign(
+      authPayload,
+      config.jwt.refreshSecret as string,
+      {
+        expiresIn: config.jwt.refreshExpiresIn,
+      },
+    );
 
     const hashedRefreshToken = await bcrypt.hash(
       newRefreshToken,

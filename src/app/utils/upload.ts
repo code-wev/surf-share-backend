@@ -14,7 +14,7 @@ const storage = new CloudinaryStorage({
   params: {
     folder: "surfshare",
     allowed_formats: ["jpg", "jpeg", "png", "gif", "webp"],
-  } as any,
+  } as Record<string, unknown>,
 });
 
 export const upload = multer({ storage: storage });
