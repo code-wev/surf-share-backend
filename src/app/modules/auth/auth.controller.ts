@@ -70,7 +70,7 @@ const loginUser: RequestHandler = catchAsync(async (req, res) => {
  */
 const refreshToken: RequestHandler = catchAsync(async (req, res) => {
   const token = req.cookies.refreshToken;
-  
+
   if (!token) {
     throw new AppError(401, "Refresh token not found.");
   }
@@ -91,7 +91,7 @@ const refreshToken: RequestHandler = catchAsync(async (req, res) => {
     success: true,
     message: "Token refreshed successfully.",
     data: {
-      accessToken: result.accessToken
+      accessToken: result.accessToken,
     },
   });
 });
@@ -144,7 +144,8 @@ const resetPassword: RequestHandler = catchAsync(async (req, res) => {
  * Change Password
  */
 const changePassword: RequestHandler = catchAsync(async (req, res) => {
-  const userId = (req as any).user?.userId;
+  const userId = (req as unknown as { user?: { userId?: string } }).user
+    ?.userId;
 
   if (!userId) {
     throw new Error("User ID not found in request.");

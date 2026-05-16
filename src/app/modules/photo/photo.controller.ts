@@ -105,16 +105,23 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     }
 
     console.log("Uploading to Cloudinary...");
-    const cloudinaryResult = await new Promise<any>((resolve, reject) => {
-      const stream = cloudinaryInstance.uploader.upload_stream(
-        { folder: "surfshare" },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result);
-        },
-      );
-      stream.end(file.buffer);
-    });
+    interface CloudinaryUploadResult {
+      secure_url: string;
+      [key: string]: unknown;
+    }
+
+    const cloudinaryResult = await new Promise<CloudinaryUploadResult>(
+      (resolve, reject) => {
+        const stream = cloudinaryInstance.uploader.upload_stream(
+          { folder: "surfshare" },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result as CloudinaryUploadResult);
+          },
+        );
+        stream.end(file.buffer);
+      },
+    );
     console.log("Cloudinary Upload Success!");
 
     return {
@@ -224,7 +231,7 @@ const updatePhotoStatus: RequestHandler = catchAsync(async (req, res) => {
 
   const result = await PhotoService.updatePhotoStatus(
     photoId as string,
-    status as any,
+    status as PhotoStatus,
   );
 
   sendResponse(res, {

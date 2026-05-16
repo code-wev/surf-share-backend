@@ -28,8 +28,12 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
   address: user.address,
   phoneNumber: user.phoneNumber,
   paypalEmail: user.paypalEmail,
-  permissions: user.permissions as any,
-  profileImageUrl: (user as any).profileImageUrl,
+  permissions: user.permissions
+    ? (user.permissions as unknown as string[])
+    : undefined,
+  profileImageUrl:
+    (user as unknown as { profileImageUrl?: string | null }).profileImageUrl ??
+    null,
   socialAccounts: user.socialAccount
     ? (user.socialAccount as unknown as ISocialAccount[])
     : undefined,
@@ -50,15 +54,15 @@ const getAllUsers = async (query: Record<string, unknown>) => {
       filter.role = Role.PHOTOGRAPHER;
     } else if (role === "Surfers" || role.toUpperCase() === "SURFER") {
       filter.role = Role.SURFER;
-    } else if (role.toUpperCase() === 'MODERATOR' || role === 'Moderators') {
+    } else if (role.toUpperCase() === "MODERATOR" || role === "Moderators") {
       filter.role = Role.MODERATOR;
-    } else if (role.toUpperCase() === 'ADMIN' || role === 'Admins') {
+    } else if (role.toUpperCase() === "ADMIN" || role === "Admins") {
       filter.role = Role.ADMIN;
     }
   }
 
   const limitNumber = Number(limit) || 10;
-  
+
   const queryOptions: Prisma.UserFindManyArgs = {
     where: filter,
     orderBy: { createdAt: "desc" },
@@ -80,7 +84,8 @@ const getAllUsers = async (query: Record<string, unknown>) => {
     prisma.user.count({ where: filter }),
   ]);
 
-  const nextCursor = users.length === limitNumber ? users[users.length - 1].id : null;
+  const nextCursor =
+    users.length === limitNumber ? users[users.length - 1].id : null;
 
   return {
     meta: {
@@ -88,7 +93,7 @@ const getAllUsers = async (query: Record<string, unknown>) => {
       limit: limitNumber,
       total,
       totalPages: Math.ceil(total / limitNumber),
-      nextCursor
+      nextCursor,
     },
     data: users.map(sanitizeUser),
   };
