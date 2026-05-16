@@ -47,8 +47,21 @@ const verifySession: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const getPurchasedPhotoIds: RequestHandler = catchAsync(async (req, res) => {
+  const userId = req.user!.userId;
+  const result = await CheckoutService.getPurchasedPhotoIds(userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Purchased photo IDs retrieved successfully",
+    data: result,
+  });
+});
+
 export const CheckoutController = {
   createSession,
   stripeWebhook,
   verifySession,
+  getPurchasedPhotoIds,
 };

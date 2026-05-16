@@ -26,7 +26,27 @@ const createSession = async (userId: string, photoIds: string[]) => {
   }
 
   // Ensure user isn't trying to buy photos they already bought
-  // (Optional: depending on requirements. For now, skip to keep simple)
+  const alreadyPurchased = await prisma.orderItem.findMany({
+    where: {
+      order: {
+        userId: userId,
+        status: "PAID",
+      },
+      photoId: { in: photoIds },
+    },
+    select: { photoId: true },
+  });
+
+  if (alreadyPurchased.length > 0) {
+    const purchasedIds = alreadyPurchased.map((item) => item.photoId);
+    throw new AppError(
+      400,
+      JSON.stringify({
+        message: "You already own some of these photos.",
+        purchasedIds,
+      })
+    );
+  }
 
   let totalAmount = 0;
   const lineItems: any[] = [];
@@ -124,8 +144,23 @@ const verifySession = async (sessionId: string) => {
   return { status: session.payment_status };
 };
 
+const getPurchasedPhotoIds = async (userId: string) => {
+  const purchasedItems = await prisma.orderItem.findMany({
+    where: {
+      order: {
+        userId,
+        status: "PAID",
+      },
+    },
+    select: { photoId: true },
+  });
+
+  return purchasedItems.map(item => item.photoId);
+};
+
 export const CheckoutService = {
   createSession,
   handleWebhook,
   verifySession,
+  getPurchasedPhotoIds,
 };

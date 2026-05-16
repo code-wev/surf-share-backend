@@ -25,4 +25,10 @@ router.get(
   CheckoutController.verifySession,
 );
 
+router.get(
+  "/purchased-ids",
+  auth("SURFER", "PHOTOGRAPHER", "MODERATOR", "ADMIN"),
+  CheckoutController.getPurchasedPhotoIds,
+);
+
 export const CheckoutRoutes = router;
