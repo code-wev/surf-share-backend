@@ -9,6 +9,7 @@ import { FavoriteRoutes } from "../modules/favorite/favorite.routes";
 import { CheckoutRoutes } from "../modules/checkout/checkout.routes";
 import { ContactRoutes } from "../modules/contact/contact.routes";
 import { OrderRoutes } from "../modules/order/order.routes";
+import { SalesRoutes } from "../modules/sales/sales.routes";
 
 const router = Router();
 
@@ -48,6 +49,10 @@ const moduleRoutes = [
   {
     path: "/orders",
     route: OrderRoutes,
+  },
+  {
+    path: "/sales",
+    route: SalesRoutes,
   },
 ];
 
