@@ -84,10 +84,30 @@ const uploadProfileImage: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const updateSubscriptionTier: RequestHandler = catchAsync(async (req, res) => {
+  const rawId = req.params.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+  const { subscriptionTier } = req.body;
+
+  if (!subscriptionTier || !id) {
+    throw new AppError(400, "Missing subscriptionTier or id payload.");
+  }
+
+  const result = await UserService.updateSubscriptionTier(id as string, subscriptionTier);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Subscription tier updated successfully.",
+    data: result,
+  });
+});
+
 export const UserController = {
   getAllUsers,
   getUserById,
   updateUser,
   deleteUser,
   uploadProfileImage,
+  updateSubscriptionTier,
 };

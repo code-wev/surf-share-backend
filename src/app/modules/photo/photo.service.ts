@@ -1,20 +1,64 @@
 import { PhotoStatus, Prisma } from "@prisma/client";
 import prisma from "../../utils/prisma";
 import type { IPhotoBulkItem, IPhotoQuery } from "./photo.interface";
+import AppError from "../../errors/AppError";
 
 const bulkCreatePhotos = async (
   photographerId: string,
   items: IPhotoBulkItem[],
 ) => {
-  const approvedCount = await prisma.photo.count({
-    where: {
-      photographerId,
-      status: PhotoStatus.APPROVED,
-    },
+  const user = await prisma.user.findUnique({
+    where: { id: photographerId },
   });
 
-  const newStatus =
-    approvedCount >= 10 ? PhotoStatus.APPROVED : PhotoStatus.PENDING;
+  if (!user) throw new AppError(404, "User not found");
+
+  const config = await prisma.subscriptionConfig.findUnique({
+    where: { tier: user.subscriptionTier },
+  });
+
+  if (!config) throw new AppError(500, "Subscription config not found");
+
+  // Rule 1: Max Price
+  if (config.maxPrice !== null) {
+    const invalidPriceItem = items.find((item) => item.price > config.maxPrice!);
+    if (invalidPriceItem) {
+      throw new AppError(400, `Photo price of $${invalidPriceItem.price} exceeds your tier limit of $${config.maxPrice}.`);
+    }
+  }
+
+  // Rule 2: Daily Upload Limit
+  if (config.dailyUploadLimit !== null) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const uploadedToday = await prisma.photo.count({
+      where: {
+        photographerId,
+        createdAt: { gte: startOfDay },
+      },
+    });
+
+    if (uploadedToday + items.length > config.dailyUploadLimit) {
+      throw new AppError(
+        400,
+        `Daily upload limit of ${config.dailyUploadLimit} exceeded. You have already uploaded ${uploadedToday} photos today.`
+      );
+    }
+  }
+
+  // Rule 3: Auto Approval
+  let newStatus: PhotoStatus = PhotoStatus.PENDING;
+  if (!config.requiresApproval) {
+    newStatus = PhotoStatus.APPROVED;
+  } else {
+    const approvedCount = await prisma.photo.count({
+      where: {
+        photographerId,
+        status: PhotoStatus.APPROVED,
+      },
+    });
+    newStatus = approvedCount >= 10 ? PhotoStatus.APPROVED : PhotoStatus.PENDING;
+  }
 
   const photoRecords = items.map((item) => ({
     photographerId,

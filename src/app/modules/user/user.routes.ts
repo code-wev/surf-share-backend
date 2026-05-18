@@ -24,5 +24,10 @@ router.patch(
   upload.single("image"),
   UserController.uploadProfileImage,
 );
+router.patch(
+  "/:id/subscription",
+  auth("ADMIN"),
+  UserController.updateSubscriptionTier,
+);
 
 export const UserRoutes = router;
