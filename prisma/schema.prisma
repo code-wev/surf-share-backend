@@ -13,6 +13,7 @@ model User {
   password           String
   role               Role                  @default(SURFER)
   status             UserStatus            @default(ACTIVE)
+  subscriptionTier   SubscriptionTier      @default(BRONZE)
   countryName        String?
   address            String?
   phoneNumber        String?
@@ -47,6 +48,20 @@ model User {
   @@index([status])
   @@index([createdAt])
   @@map("users")
+}
+
+model SubscriptionConfig {
+  id                 String           @id @default(uuid())
+  tier               SubscriptionTier @unique
+  photographerSplit  Int
+  platformSplit      Int
+  maxPrice           Float?
+  dailyUploadLimit   Int?
+  requiresApproval   Boolean          @default(false)
+  
+  updatedAt          DateTime         @updatedAt
+
+  @@map("subscription_configs")
 }
 
 model Advertisement {
@@ -150,8 +165,10 @@ model Order {
 }
 
 model OrderItem {
-  id        String   @id @default(uuid())
-  price     Float
+  id                   String   @id @default(uuid())
+  price                Float
+  photographerEarnings Float?
+  platformFee          Float?
   
   orderId   String
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -186,6 +203,12 @@ enum Role {
   PHOTOGRAPHER
   MODERATOR
   ADMIN
+}
+
+enum SubscriptionTier {
+  BRONZE
+  SILVER
+  GOLD
 }
 
 enum ModeratorPermission {
