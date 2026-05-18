@@ -14,7 +14,7 @@ const createSession = async (userId: string, photoIds: string[]) => {
     },
     include: {
       photographer: {
-        select: { name: true },
+        select: { name: true, subscriptionTier: true },
       },
     },
   });
@@ -25,6 +25,10 @@ const createSession = async (userId: string, photoIds: string[]) => {
       "None of the selected photos are available for purchase.",
     );
   }
+
+  // Fetch all subscription configs to memory for quick access
+  const configs = await prisma.subscriptionConfig.findMany();
+  const configMap = new Map(configs.map(c => [c.tier, c]));
 
   // Ensure user isn't trying to buy photos they already bought
   const alreadyPurchased = await prisma.orderItem.findMany({
@@ -83,10 +87,19 @@ const createSession = async (userId: string, photoIds: string[]) => {
       totalAmount,
       status: "PENDING",
       items: {
-        create: photos.map((photo) => ({
-          photoId: photo.id,
-          price: photo.price,
-        })),
+        create: photos.map((photo) => {
+          const config = configMap.get(photo.photographer.subscriptionTier);
+          const photographerSplit = config?.photographerSplit || 70; // fallback to 70%
+          const photographerEarnings = (photo.price * photographerSplit) / 100;
+          const platformFee = photo.price - photographerEarnings;
+
+          return {
+            photoId: photo.id,
+            price: photo.price,
+            photographerEarnings,
+            platformFee,
+          };
+        }),
       },
     },
   });
