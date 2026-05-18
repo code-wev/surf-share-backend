@@ -19,7 +19,7 @@ type IUserUpdatePayload = {
 };
 
 // Helper function to sanitize user data before sending it in responses
-const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
+const sanitizeUser = (user: UserWithSocialAccount): IUserResponse & { subscriptionTier?: string } => ({
   id: user.id,
   name: user.name,
   email: user.email,
@@ -28,6 +28,7 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
   address: user.address,
   phoneNumber: user.phoneNumber,
   paypalEmail: user.paypalEmail,
+  subscriptionTier: (user as any).subscriptionTier,
   permissions: user.permissions
     ? (user.permissions as unknown as string[])
     : undefined,
@@ -143,9 +144,26 @@ const deleteUser = async (id: string): Promise<IUserResponse> => {
   return sanitizeUser(deletedUser);
 };
 
+// Update Subscription Tier
+const updateSubscriptionTier = async (id: string, tier: string) => {
+  const existingUser = await prisma.user.findUnique({ where: { id } });
+  if (!existingUser) throw new AppError(404, "User not found.");
+  if (existingUser.role !== Role.PHOTOGRAPHER) {
+    throw new AppError(400, "Only photographers can have subscription tiers.");
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id },
+    data: { subscriptionTier: tier as any },
+  });
+
+  return sanitizeUser(updatedUser);
+};
+
 export const UserService = {
   getAllUsers,
   getUserById,
   updateUser,
   deleteUser,
+  updateSubscriptionTier,
 };
