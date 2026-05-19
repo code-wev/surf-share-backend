@@ -12,7 +12,8 @@ type IUserUpdatePayload = {
   countryName?: string;
   address?: string;
   phoneNumber?: string;
-  paypalEmail?: string;
+  paypalEmail?:
+   string;
   profileImageUrl?: string;
   permissions?: User["permissions"];
   socialAccounts?: ISocialAccount[];
@@ -43,6 +44,75 @@ const sanitizeUser = (
     ? (user.socialAccount as unknown as ISocialAccount[])
     : undefined,
 });
+
+type UserStatsMap = Record<
+  string,
+  {
+    photoCount: number;
+    purchasePhoto: number;
+    platformCommission: number;
+  }
+>;
+
+const buildUserStatsMap = async (userIds: string[]): Promise<UserStatsMap> => {
+  if (userIds.length === 0) {
+    return {};
+  }
+
+  const [photos, orderItems] = await Promise.all([
+    prisma.photo.groupBy({
+      by: ["photographerId"],
+      where: { photographerId: { in: userIds } },
+      _count: { _all: true },
+    }),
+    prisma.orderItem.findMany({
+      where: {
+        order: {
+          userId: { in: userIds },
+          status: "PAID",
+        },
+      },
+      select: {
+        price: true,
+        platformFee: true,
+        order: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  const statsMap: UserStatsMap = {};
+
+  for (const userId of userIds) {
+    statsMap[userId] = {
+      photoCount: 0,
+      purchasePhoto: 0,
+      platformCommission: 0,
+    };
+  }
+
+  for (const photoGroup of photos) {
+    statsMap[photoGroup.photographerId] = {
+      ...statsMap[photoGroup.photographerId],
+      photoCount: photoGroup._count._all,
+    };
+  }
+
+  for (const orderItem of orderItems) {
+    const userId = orderItem.order.userId;
+    statsMap[userId] = {
+      ...statsMap[userId],
+      purchasePhoto: statsMap[userId].purchasePhoto + 1,
+      platformCommission:
+        statsMap[userId].platformCommission + (orderItem.platformFee || 0),
+    };
+  }
+
+  return statsMap;
+};
 
 const getAllUsers = async (query: Record<string, unknown>) => {
   const { role, page, limit = 10, cursor } = query;
@@ -89,6 +159,8 @@ const getAllUsers = async (query: Record<string, unknown>) => {
     prisma.user.count({ where: filter }),
   ]);
 
+  const userStatsMap = await buildUserStatsMap(users.map((user) => user.id));
+
   const nextCursor =
     users.length === limitNumber ? users[users.length - 1].id : null;
 
@@ -100,7 +172,15 @@ const getAllUsers = async (query: Record<string, unknown>) => {
       totalPages: Math.ceil(total / limitNumber),
       nextCursor,
     },
-    data: users.map(sanitizeUser),
+    data: users.map((user) => {
+      const stats = userStatsMap[user.id];
+      return {
+        ...sanitizeUser(user),
+        photoCount: stats?.photoCount ?? 0,
+        purchasePhoto: stats?.purchasePhoto ?? 0,
+        platformCommission: Number((stats?.platformCommission ?? 0).toFixed(2)),
+      };
+    }),
   };
 };
 

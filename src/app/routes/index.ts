@@ -10,6 +10,7 @@ import { CheckoutRoutes } from "../modules/checkout/checkout.routes";
 import { ContactRoutes } from "../modules/contact/contact.routes";
 import { OrderRoutes } from "../modules/order/order.routes";
 import { SalesRoutes } from "../modules/sales/sales.routes";
+import { DashboardRoutes } from "../modules/dashboard/dashboard.routes";
 
 const router = Router();
 
@@ -54,6 +55,10 @@ const moduleRoutes = [
     path: "/sales",
     route: SalesRoutes,
   },
+  {
+    path: "/dashboard",
+    route: DashboardRoutes,
+  },
 ];
 
 moduleRoutes.forEach((route) => {
@@ -61,3 +66,4 @@ moduleRoutes.forEach((route) => {
 });
 
 export default router;
+
