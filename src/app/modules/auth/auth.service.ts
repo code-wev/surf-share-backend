@@ -48,6 +48,10 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
   name: user.name,
   email: user.email,
   role: user.role,
+  status: (user as any).status ?? "ACTIVE",
+  createdAt: (user as any).createdAt
+    ? (user as any).createdAt.toISOString()
+    : new Date().toISOString(),
   countryName: user.countryName,
   address: user.address,
   phoneNumber: user.phoneNumber,

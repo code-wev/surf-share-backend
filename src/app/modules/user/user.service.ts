@@ -1,4 +1,4 @@
-import { Role, User, Prisma } from "@prisma/client";
+import { Role, User, Prisma, UserStatus } from "@prisma/client";
 import AppError from "../../errors/AppError";
 import prisma from "../../utils/prisma";
 import type { IUserResponse, ISocialAccount } from "./user.interface";
@@ -19,11 +19,15 @@ type IUserUpdatePayload = {
 };
 
 // Helper function to sanitize user data before sending it in responses
-const sanitizeUser = (user: UserWithSocialAccount): IUserResponse & { subscriptionTier?: string } => ({
+const sanitizeUser = (
+  user: UserWithSocialAccount,
+): IUserResponse & { subscriptionTier?: string; status: string } => ({
   id: user.id,
   name: user.name,
   email: user.email,
   role: user.role,
+  status: user.status,
+  createdAt: user.createdAt.toISOString(),
   countryName: user.countryName,
   address: user.address,
   phoneNumber: user.phoneNumber,
@@ -160,10 +164,24 @@ const updateSubscriptionTier = async (id: string, tier: string) => {
   return sanitizeUser(updatedUser);
 };
 
+// Update User Status
+const updateStatus = async (id: string, status: UserStatus) => {
+  const existingUser = await prisma.user.findUnique({ where: { id } });
+  if (!existingUser) throw new AppError(404, "User not found.");
+
+  const updatedUser = await prisma.user.update({
+    where: { id },
+    data: { status },
+  });
+
+  return sanitizeUser(updatedUser);
+};
+
 export const UserService = {
   getAllUsers,
   getUserById,
   updateUser,
   deleteUser,
   updateSubscriptionTier,
+  updateStatus,
 };

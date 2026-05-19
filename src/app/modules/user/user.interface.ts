@@ -38,6 +38,8 @@ export interface IUserResponse {
   name: string;
   email: string;
   role: string;
+  status: string;
+  createdAt: string;
   countryName?: string | null;
   address?: string | null;
   phoneNumber?: string | null;
@@ -46,7 +48,6 @@ export interface IUserResponse {
   socialAccounts?: ISocialAccount[];
   profileImageUrl?: string | null;
 }
-
 
 export interface ILoginResponse {
   accessToken: string;

@@ -62,6 +62,10 @@ const uploadProfileImage: RequestHandler = catchAsync(async (req, res) => {
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
   const file = req.file;
 
+  console.log("File found:", !!file);
+  console.log("Request file:", file);
+  console.log("Request body:", req.body);
+
   if (!file) {
     throw new AppError(400, "No image file uploaded.");
   }
@@ -103,6 +107,25 @@ const updateSubscriptionTier: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const updateStatus: RequestHandler = catchAsync(async (req, res) => {
+  const rawId = req.params.id;
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
+  const { status } = req.body;
+
+  if (!status || !id) {
+    throw new AppError(400, "Missing status or id payload.");
+  }
+
+  const result = await UserService.updateStatus(id as string, status);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "User status updated successfully.",
+    data: result,
+  });
+});
+
 export const UserController = {
   getAllUsers,
   getUserById,
@@ -110,4 +133,5 @@ export const UserController = {
   deleteUser,
   uploadProfileImage,
   updateSubscriptionTier,
+  updateStatus,
 };
