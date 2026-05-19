@@ -180,11 +180,13 @@ const getMapData = async () => {
         name: loc.name,
         state: loc.state,
         region: loc.region,
+        country: "Australia", // Hardcoding Australia for now as per demo, or omit if schema handles it
         coordinates: [loc.latitude, loc.longitude],
         availableFrom: minDate ? (minDate as Date).toISOString().split("T")[0] : null,
         availableTo: maxDate ? (maxDate as Date).toISOString().split("T")[0] : null,
         timeWindows: Array.from(timeKeys),
         imageSrc: loc.previewImage,
+        photoCount: loc.photos.length,
       };
     });
 
