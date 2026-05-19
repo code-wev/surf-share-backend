@@ -9,6 +9,11 @@ type TopContributor = {
   avatarSrc: string;
 };
 
+type WeeklyUploadBar = {
+  dayLabel: string;
+  uploads: number;
+};
+
 const getDashboardStats = async (role: Role) => {
   const [
     totalUsers,
@@ -90,6 +95,43 @@ const getDashboardStats = async (role: Role) => {
       .reduce((acc, curr) => acc + (curr.photographerEarnings || 0), 0);
     return { label: month, value: val };
   });
+
+  const weeklyDates = Array.from({ length: 7 }).map((_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (6 - index));
+    return date;
+  });
+
+  const weeklyUploadCounts = await Promise.all(
+    weeklyDates.map((date) => {
+      const startOfDay = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+      );
+      const endOfDay = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate() + 1,
+      );
+
+      return prisma.photo.count({
+        where: {
+          createdAt: {
+            gte: startOfDay,
+            lt: endOfDay,
+          },
+        },
+      });
+    }),
+  );
+
+  const weeklyUploadActivity: WeeklyUploadBar[] = weeklyDates.map(
+    (date, index) => ({
+      dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }),
+      uploads: weeklyUploadCounts[index] ?? 0,
+    }),
+  );
 
   // Get top contributors by photo count
   const topContributorsRaw = await prisma.photo.groupBy({
@@ -188,6 +230,7 @@ const getDashboardStats = async (role: Role) => {
             { label: "Pending photos", value: pendingPhotos.toString() },
           ],
     chartData: monthlyEarnings,
+    weeklyUploadActivity,
     topContributors,
   };
 };
