@@ -40,6 +40,9 @@ export interface IUserResponse {
   role: string;
   status: string;
   createdAt: string;
+  photoCount?: number;
+  purchasePhoto?: number;
+  platformCommission?: number;
   countryName?: string | null;
   address?: string | null;
   phoneNumber?: string | null;
