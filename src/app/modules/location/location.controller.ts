@@ -72,9 +72,21 @@ const deleteLocation: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const getMapData: RequestHandler = catchAsync(async (req, res) => {
+  const result = await LocationService.getMapData();
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Map data retrieved successfully.",
+    data: result,
+  });
+});
+
 export const LocationController = {
   getAllLocations,
   createLocation,
   updateLocation,
   deleteLocation,
+  getMapData,
 };

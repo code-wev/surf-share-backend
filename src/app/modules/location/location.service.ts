@@ -145,9 +145,58 @@ const deleteLocation = async (id: string): Promise<Location> => {
   });
 };
 
+const getMapData = async () => {
+  const locations = await prisma.location.findMany({
+    include: {
+      photos: {
+        where: { status: "APPROVED" },
+        select: {
+          capturedAt: true,
+          timeKey: true,
+        },
+      },
+    },
+  });
+
+  const mapData = locations
+    .filter((loc) => loc.photos.length > 0)
+    .map((loc) => {
+      let minDate: Date | null = null;
+      let maxDate: Date | null = null;
+      const timeKeys = new Set<string>();
+
+      loc.photos.forEach((p) => {
+        if (p.capturedAt) {
+          if (!minDate || p.capturedAt < minDate) minDate = p.capturedAt;
+          if (!maxDate || p.capturedAt > maxDate) maxDate = p.capturedAt;
+        }
+        if (p.timeKey && p.timeKey !== "UNKNOWN") {
+          timeKeys.add(p.timeKey.toLowerCase());
+        }
+      });
+
+      return {
+        id: loc.id,
+        name: loc.name,
+        state: loc.state,
+        region: loc.region,
+        country: "Australia", // Hardcoding Australia for now as per demo, or omit if schema handles it
+        coordinates: [loc.latitude, loc.longitude],
+        availableFrom: minDate ? (minDate as Date).toISOString().split("T")[0] : null,
+        availableTo: maxDate ? (maxDate as Date).toISOString().split("T")[0] : null,
+        timeWindows: Array.from(timeKeys),
+        imageSrc: loc.previewImage,
+        photoCount: loc.photos.length,
+      };
+    });
+
+  return mapData;
+};
+
 export const LocationService = {
   getAllLocations,
   createLocation,
   updateLocation,
   deleteLocation,
+  getMapData,
 };
