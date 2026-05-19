@@ -18,16 +18,21 @@ router.patch(
   UserController.updateUser,
 );
 router.delete("/:id", auth("ADMIN"), UserController.deleteUser);
-router.patch(
+router.post(
   "/:id/profile-image",
-  auth(),
   upload.single("image"),
+  auth(),
   UserController.uploadProfileImage,
 );
 router.patch(
   "/:id/subscription",
   auth("ADMIN"),
   UserController.updateSubscriptionTier,
+);
+router.patch(
+  "/:id/status",
+  auth("ADMIN", "MODERATOR"),
+  UserController.updateStatus,
 );
 
 export const UserRoutes = router;
