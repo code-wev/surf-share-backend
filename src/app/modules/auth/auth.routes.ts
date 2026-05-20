@@ -35,6 +35,12 @@ router.post(
 );
 
 router.post(
+  "/google-login",
+  loginRateLimiter,
+  AuthController.googleLogin,
+);
+
+router.post(
   "/refresh-token",
   AuthController.refreshToken
 );
