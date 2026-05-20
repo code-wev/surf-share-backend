@@ -65,6 +65,29 @@ const loginUser: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const googleLogin: RequestHandler = catchAsync(async (req, res) => {
+  const { code, role, shouldCreate } = req.body;
+  const result = await AuthService.googleLogin(code, role, shouldCreate);
+
+  const { refreshToken, ...responseData } = result;
+
+  if (refreshToken) {
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: config.nodeEnv === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+  }
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "User logged in successfully with Google.",
+    data: responseData,
+  });
+});
+
 /**
  * Refresh Token
  */
@@ -166,6 +189,7 @@ export const AuthController = {
   registerPhotographer,
   registerModerator,
   loginUser,
+  googleLogin,
   refreshToken,
   forgotPassword,
   verifyOtp,
