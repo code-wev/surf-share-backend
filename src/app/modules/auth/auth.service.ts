@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import crypto from "crypto";
 import { Role, Prisma } from "@prisma/client";
+import { OAuth2Client } from "google-auth-library";
 
 import config from "../../config";
 import AppError from "../../errors/AppError";
@@ -27,6 +28,12 @@ import type {
   IUserResponse,
   ISocialAccount,
 } from "../user/user.interface";
+
+const googleClient = new OAuth2Client(
+  config.google.clientId,
+  config.google.clientSecret,
+  "postmessage", // Standard for auth-code flow from frontend
+);
 
 type UserWithSocialAccount = {
   id: string;
@@ -227,6 +234,109 @@ const loginUser = async (
   });
 
   return { accessToken, refreshToken, user: sanitizeUser(user) };
+};
+
+const googleLogin = async (
+  code: string,
+  role?: Role,
+  shouldCreate: boolean = true,
+): Promise<ILoginResponse> => {
+  try {
+    const { tokens } = await googleClient.getToken(code);
+    const idToken = tokens.id_token;
+
+    if (!idToken) {
+      throw new AppError(401, "Failed to get ID token from Google.");
+    }
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: config.google.clientId,
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      throw new AppError(401, "Invalid Google token payload.");
+    }
+
+    const { email, name, picture } = payload;
+
+    let user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      if (!shouldCreate) {
+        throw new AppError(
+          404,
+          "No account found with this Google email. Please sign up to create an account.",
+        );
+      }
+
+      // Create user if not exists
+      user = await prisma.user.create({
+        data: {
+          email,
+          name: name || "Anonymous",
+          profileImageUrl: picture,
+          password: await bcrypt.hash(
+            crypto.randomBytes(16).toString("hex"),
+            Number(config.bcryptSaltRounds),
+          ),
+          role: role || Role.SURFER,
+          ...(role === Role.PHOTOGRAPHER ? { paypalEmail: email } : {}),
+        },
+      });
+    } else {
+      // Update profile image if it exists and user doesn't have one
+      if (picture && !user.profileImageUrl) {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { profileImageUrl: picture },
+        });
+      }
+    }
+
+    if (user.status === "SUSPENDED") {
+      throw new AppError(
+        403,
+        "Your account is suspended. Please contact support.",
+      );
+    }
+
+    const authPayload = { userId: user.id, email: user.email, role: user.role };
+    const accessToken = jwt.sign(
+      authPayload,
+      config.jwt.accessSecret as string,
+      {
+        expiresIn: config.jwt.accessExpiresIn,
+      },
+    );
+
+    const refreshToken = jwt.sign(
+      authPayload,
+      config.jwt.refreshSecret as string,
+      {
+        expiresIn: config.jwt.refreshExpiresIn,
+      },
+    );
+
+    const hashedRefreshToken = await bcrypt.hash(
+      refreshToken,
+      Number(config.bcryptSaltRounds),
+    );
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: hashedRefreshToken },
+    });
+
+    return { accessToken, refreshToken, user: sanitizeUser(user) };
+  } catch (error: any) {
+    if (error.statusCode) throw error;
+    console.error("Google Login Error:", error);
+    throw new AppError(401, "Google authentication failed.");
+  }
 };
 
 const refreshToken = async (token: string): Promise<IRefreshTokenResponse> => {
@@ -560,6 +670,7 @@ export const AuthService = {
   registerPhotographer,
   registerModerator,
   loginUser,
+  googleLogin,
   refreshToken,
   forgotPassword,
   verifyOtp,

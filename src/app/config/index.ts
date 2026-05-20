@@ -38,6 +38,10 @@ const config = {
     resetExpiresIn: (process.env.JWT_RESET_EXPIRES_IN ??
       "15m") as SignOptions["expiresIn"],
   },
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  },
   email: {
     host: process.env.EMAIL_HOST ?? "smtp.gmail.com",
     port: parseNumber(process.env.EMAIL_PORT, 587),
