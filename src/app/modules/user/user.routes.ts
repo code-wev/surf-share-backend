@@ -2,7 +2,7 @@ import { Router } from "express";
 
 import validateRequest from "../../middlewares/validateRequest";
 import auth from "../../middlewares/auth";
-import { upload } from "../../utils/upload";
+import { uploadProfile } from "../../utils/upload";
 import { UserController } from "./user.controller";
 import { UserValidation } from "./user.validation";
 
@@ -20,7 +20,7 @@ router.patch(
 router.delete("/:id", auth("ADMIN"), UserController.deleteUser);
 router.post(
   "/:id/profile-image",
-  upload.single("image"),
+  uploadProfile.single("image"),
   auth(),
   UserController.uploadProfileImage,
 );

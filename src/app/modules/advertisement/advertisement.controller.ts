@@ -19,10 +19,8 @@ const upsertAdvertisement: RequestHandler = catchAsync(async (req, res) => {
   const { advertisementURL } = req.body;
   const file = req.file;
 
-  const imageUrl = file?.path;
-
   const result = await AdvertisementService.upsertAdvertisement(
-    imageUrl,
+    file?.filename,
     advertisementURL,
   );
 

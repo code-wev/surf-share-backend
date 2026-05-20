@@ -74,7 +74,7 @@ const uploadProfileImage: RequestHandler = catchAsync(async (req, res) => {
     throw new AppError(400, "Missing user id parameter.");
   }
 
-  const imageUrl = file.path;
+  const imageUrl = `/uploads/profile/${file.filename}`;
 
   const updatedUser = await UserService.updateUser(id, {
     profileImageUrl: imageUrl,

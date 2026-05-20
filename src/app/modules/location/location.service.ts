@@ -1,5 +1,6 @@
 import type { Location, Prisma } from "@prisma/client";
-import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
+import path from "path";
 import AppError from "../../errors/AppError";
 import prisma from "../../utils/prisma";
 import type {
@@ -80,12 +81,12 @@ const getAllLocations = async (query: Record<string, unknown>) => {
 
 const createLocation = async (
   payload: ILocationCreatePayload,
-  imageUrl: string,
+  fileName: string,
 ): Promise<Location> => {
   return prisma.location.create({
     data: {
       ...payload,
-      previewImage: imageUrl,
+      previewImage: `/uploads/location/${fileName}`,
     },
   });
 };
@@ -93,7 +94,7 @@ const createLocation = async (
 const updateLocation = async (
   id: string,
   payload: ILocationUpdatePayload,
-  imageUrl?: string,
+  fileName?: string,
 ): Promise<Location> => {
   const existingLocation = await prisma.location.findUnique({ where: { id } });
 
@@ -103,16 +104,17 @@ const updateLocation = async (
 
   let finalImageUrl = existingLocation.previewImage;
 
-  if (imageUrl) {
+  if (fileName) {
     try {
-      const urlParts = existingLocation.previewImage.split("/");
-      const fileName = urlParts[urlParts.length - 1];
-      const publicId = `surfshare/${fileName.split(".")[0]}`;
-      await cloudinary.uploader.destroy(publicId);
+      const oldFileName = existingLocation.previewImage.split("/").pop();
+      if (oldFileName) {
+        const oldPath = path.join(process.cwd(), "public", "uploads", "location", oldFileName);
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
     } catch (e) {
-      console.error("Failed to delete old image from cloudinary", e);
+      console.error("Failed to delete old image from disk", e);
     }
-    finalImageUrl = imageUrl;
+    finalImageUrl = `/uploads/location/${fileName}`;
   }
 
   return prisma.location.update({
@@ -132,12 +134,13 @@ const deleteLocation = async (id: string): Promise<Location> => {
   }
 
   try {
-    const urlParts = existingLocation.previewImage.split("/");
-    const fileName = urlParts[urlParts.length - 1];
-    const publicId = `surfshare/${fileName.split(".")[0]}`;
-    await cloudinary.uploader.destroy(publicId);
+    const oldFileName = existingLocation.previewImage.split("/").pop();
+    if (oldFileName) {
+      const oldPath = path.join(process.cwd(), "public", "uploads", "location", oldFileName);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
   } catch (e) {
-    console.error("Failed to delete image from cloudinary", e);
+    console.error("Failed to delete image from disk", e);
   }
 
   return prisma.location.delete({
@@ -180,7 +183,7 @@ const getMapData = async () => {
         name: loc.name,
         state: loc.state,
         region: loc.region,
-        country: "Australia", // Hardcoding Australia for now as per demo, or omit if schema handles it
+        country: "Australia",
         coordinates: [loc.latitude, loc.longitude],
         availableFrom: minDate ? (minDate as Date).toISOString().split("T")[0] : null,
         availableTo: maxDate ? (maxDate as Date).toISOString().split("T")[0] : null,

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import auth from "../../middlewares/auth";
 import validateRequest from "../../middlewares/validateRequest";
-import { upload } from "../../utils/upload";
+import { uploadAdvertisement } from "../../utils/upload";
 import { AdvertisementController } from "./advertisement.controller";
 import { AdvertisementValidation } from "./advertisement.validation";
 
@@ -12,7 +12,7 @@ router.get("/", AdvertisementController.getAdvertisement);
 router.post(
   "/",
   auth("ADMIN"),
-  upload.single("photo"),
+  uploadAdvertisement.single("photo"),
   validateRequest(AdvertisementValidation.upsertAdvertisement),
   AdvertisementController.upsertAdvertisement,
 );

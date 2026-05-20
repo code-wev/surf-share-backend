@@ -5,7 +5,8 @@ import { PhotoService } from "./photo.service";
 import AppError from "../../errors/AppError";
 import exifr from "exifr";
 import sharp from "sharp";
-import { cloudinaryInstance } from "../../utils/upload";
+import fs from "fs";
+import path from "path";
 import { PhotoStatus } from "@prisma/client";
 import { IPhotoQuery } from "./photo.interface";
 
@@ -104,28 +105,25 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
       console.log("No EXIF and no fallback date available.");
     }
 
-    console.log("Uploading to Cloudinary...");
-    interface CloudinaryUploadResult {
-      secure_url: string;
-      [key: string]: unknown;
+    console.log("Saving image to disk...");
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = file.originalname.split('.').pop() || "jpg";
+    const fileName = `${uniqueSuffix}.${ext}`;
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "photos");
+    const filePath = path.join(uploadDir, fileName);
+    
+    // Ensure directory exists
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    const cloudinaryResult = await new Promise<CloudinaryUploadResult>(
-      (resolve, reject) => {
-        const stream = cloudinaryInstance.uploader.upload_stream(
-          { folder: "surfshare" },
-          (error, result) => {
-            if (error) return reject(error);
-            resolve(result as CloudinaryUploadResult);
-          },
-        );
-        stream.end(file.buffer);
-      },
-    );
-    console.log("Cloudinary Upload Success!");
+    // Save buffer directly to disk
+    fs.writeFileSync(filePath, file.buffer);
+    
+    const imageUrl = `/uploads/photos/${fileName}`;
 
     return {
-      imageUrl: cloudinaryResult.secure_url,
+      imageUrl,
       locationId: locationsArray[index],
       price: Number(pricesArray[index]),
       timeKey,

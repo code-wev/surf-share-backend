@@ -1,21 +1,29 @@
-import { v2 as cloudinary } from "cloudinary";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
 import multer from "multer";
-import config from "../config";
+import path from "path";
+import fs from "fs";
 
-cloudinary.config({
-  cloud_name: config.cloudinary.cloudName,
-  api_key: config.cloudinary.apiKey,
-  api_secret: config.cloudinary.apiSecret,
-});
+const createDiskStorage = (folderName: string) => {
+  return multer.diskStorage({
+    destination: (req, file, cb) => {
+      const uploadPath = path.join(process.cwd(), "public", "uploads", folderName);
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true });
+      }
+      cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const ext = path.extname(file.originalname);
+      cb(null, uniqueSuffix + ext);
+    },
+  });
+};
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: "surfshare",
-    allowed_formats: ["jpg", "jpeg", "png", "gif", "webp"],
-  } as Record<string, unknown>,
-});
+// Middleware exports
+export const uploadProfile = multer({ storage: createDiskStorage("profile") });
+export const uploadAdvertisement = multer({ storage: createDiskStorage("advertisement") });
+export const uploadLocation = multer({ storage: createDiskStorage("location") });
+export const uploadPhotoMemory = multer({ storage: multer.memoryStorage() });
 
-export const upload = multer({ storage: storage });
-export const cloudinaryInstance = cloudinary;
+// Legacy export fallback if some controllers still use generic `upload`
+export const upload = multer({ storage: createDiskStorage("misc") });

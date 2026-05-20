@@ -45,6 +45,10 @@ app.use((req, res, next) => {
 
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static uploaded files locally
+import path from "path";
+app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
+
 app.use(
   "/api",
   rateLimit({

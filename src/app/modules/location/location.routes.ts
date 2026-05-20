@@ -1,7 +1,7 @@
 import { Router } from "express";
 import auth from "../../middlewares/auth";
 import validateRequest from "../../middlewares/validateRequest";
-import { upload } from "../../utils/upload";
+import { uploadLocation } from "../../utils/upload";
 import { LocationController } from "./location.controller";
 import { LocationValidation } from "./location.validation";
 
@@ -14,7 +14,7 @@ router.get("/", LocationController.getAllLocations);
 router.post(
   "/",
   auth("ADMIN", "MODERATOR"),
-  upload.single("previewImage"),
+  uploadLocation.single("previewImage"),
   validateRequest(LocationValidation.createLocation),
   LocationController.createLocation,
 );
@@ -22,7 +22,7 @@ router.post(
 router.patch(
   "/:id",
   auth("ADMIN", "MODERATOR"),
-  upload.single("previewImage"),
+  uploadLocation.single("previewImage"),
   validateRequest(LocationValidation.updateLocation),
   LocationController.updateLocation,
 );
