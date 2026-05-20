@@ -210,7 +210,12 @@ const loginUser = async (
   );
   if (!isPasswordMatched) throw new AppError(401, "Invalid email or password.");
 
-  const authPayload = { userId: user.id, email: user.email, role: user.role };
+  const authPayload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    permissions: user.permissions,
+  };
   const accessToken = jwt.sign(authPayload, config.jwt.accessSecret as string, {
     expiresIn: config.jwt.accessExpiresIn,
   });
@@ -304,7 +309,12 @@ const googleLogin = async (
       );
     }
 
-    const authPayload = { userId: user.id, email: user.email, role: user.role };
+    const authPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      permissions: user.permissions,
+    };
     const accessToken = jwt.sign(
       authPayload,
       config.jwt.accessSecret as string,
@@ -368,7 +378,12 @@ const refreshToken = async (token: string): Promise<IRefreshTokenResponse> => {
       throw new AppError(401, "Invalid or expired refresh token.");
     }
 
-    const authPayload = { userId: user.id, email: user.email, role: user.role };
+    const authPayload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      permissions: user.permissions,
+    };
     const newAccessToken = jwt.sign(
       authPayload,
       config.jwt.accessSecret as string,
