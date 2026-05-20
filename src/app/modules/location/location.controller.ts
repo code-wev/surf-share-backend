@@ -29,7 +29,7 @@ const createLocation: RequestHandler = catchAsync(async (req, res) => {
     longitude: Number(req.body.longitude),
   };
 
-  const result = await LocationService.createLocation(payload, file.path);
+  const result = await LocationService.createLocation(payload, file.filename);
 
   sendResponse(res, {
     statusCode: 201,
@@ -41,7 +41,7 @@ const createLocation: RequestHandler = catchAsync(async (req, res) => {
 
 const updateLocation: RequestHandler = catchAsync(async (req, res) => {
   const file = req.file;
-  const imageUrl = file?.path;
+  const fileName = file?.filename;
 
   const payload = { ...req.body };
   if (payload.latitude !== undefined) {
@@ -51,7 +51,7 @@ const updateLocation: RequestHandler = catchAsync(async (req, res) => {
     payload.longitude = Number(payload.longitude);
   }
 
-  const result = await LocationService.updateLocation(req.params.id as string, payload, imageUrl);
+  const result = await LocationService.updateLocation(req.params.id as string, payload, fileName);
 
   sendResponse(res, {
     statusCode: 200,

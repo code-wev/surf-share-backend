@@ -67,12 +67,13 @@ const createSession = async (userId: string, photoIds: string[]) => {
 
   for (const photo of photos) {
     totalAmount += photo.price;
+
     lineItems.push({
       price_data: {
         currency: "usd",
         product_data: {
           name: `Photo by ${photo.photographer.name}`,
-          images: [photo.imageUrl],
+          images: [photo.imageUrl.startsWith("http") ? photo.imageUrl : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}${photo.imageUrl}`],
         },
         unit_amount: Math.round(photo.price * 100), // Stripe expects cents
       },

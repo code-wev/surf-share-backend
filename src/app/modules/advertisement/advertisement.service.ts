@@ -1,5 +1,6 @@
 import type { Advertisement } from "@prisma/client";
-import { v2 as cloudinary } from "cloudinary";
+import fs from "fs";
+import path from "path";
 import AppError from "../../errors/AppError";
 import prisma from "../../utils/prisma";
 
@@ -8,7 +9,7 @@ const getAdvertisement = async (): Promise<Advertisement | null> => {
 };
 
 const upsertAdvertisement = async (
-  imageUrl: string | undefined,
+  fileName: string | undefined,
   linkUrl: string,
 ): Promise<Advertisement> => {
   const existingAd = await prisma.advertisement.findFirst();
@@ -16,17 +17,17 @@ const upsertAdvertisement = async (
   if (existingAd) {
     let finalImageUrl = existingAd.imageUrl;
 
-    if (imageUrl) {
-      // Attempt to delete old image from Cloudinary
+    if (fileName) {
       try {
-        const urlParts = existingAd.imageUrl.split("/");
-        const fileName = urlParts[urlParts.length - 1];
-        const publicId = `surfshare/${fileName.split(".")[0]}`;
-        await cloudinary.uploader.destroy(publicId);
+        const oldFileName = existingAd.imageUrl.split("/").pop();
+        if (oldFileName) {
+          const oldPath = path.join(process.cwd(), "public", "uploads", "advertisement", oldFileName);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
       } catch (e) {
-        console.error("Failed to delete old image from cloudinary", e);
+        console.error("Failed to delete old image from disk", e);
       }
-      finalImageUrl = imageUrl;
+      finalImageUrl = `/uploads/advertisement/${fileName}`;
     }
 
     return prisma.advertisement.update({
@@ -35,12 +36,12 @@ const upsertAdvertisement = async (
     });
   }
 
-  if (!imageUrl) {
+  if (!fileName) {
     throw new AppError(400, "Advertisement image is required for a new advertisement.");
   }
 
   return prisma.advertisement.create({
-    data: { imageUrl, linkUrl },
+    data: { imageUrl: `/uploads/advertisement/${fileName}`, linkUrl },
   });
 };
 
@@ -52,12 +53,13 @@ const deleteAdvertisement = async (): Promise<Advertisement> => {
   }
 
   try {
-    const urlParts = existingAd.imageUrl.split("/");
-    const fileName = urlParts[urlParts.length - 1];
-    const publicId = `surfshare/${fileName.split(".")[0]}`;
-    await cloudinary.uploader.destroy(publicId);
+    const oldFileName = existingAd.imageUrl.split("/").pop();
+    if (oldFileName) {
+      const oldPath = path.join(process.cwd(), "public", "uploads", "advertisement", oldFileName);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
   } catch (e) {
-    console.error("Failed to delete image from cloudinary", e);
+    console.error("Failed to delete image from disk", e);
   }
 
   return prisma.advertisement.delete({
