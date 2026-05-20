@@ -99,10 +99,56 @@ const getMySales = async (userId: string, locationId?: string) => {
     const totalSoldPhotos = items.length;
     const totalDownloadsCount = items.reduce((acc, item) => acc + item.totalDownloads, 0);
 
-    // Calculate chart data (last 6 months)
-    const chartData = [];
+    // Trend calculation
     const now = new Date();
-    for (let i = 5; i >= 0; i--) {
+    const firstDayCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const prevMonthSales = await prisma.orderItem.aggregate({
+      _sum: { photographerEarnings: true, price: true },
+      where: {
+        photo: { photographerId: userId },
+        order: { status: "PAID", createdAt: { lt: firstDayCurrentMonth } },
+      },
+    });
+
+    const prevMonthPhotos = await prisma.photo.count({
+      where: {
+        photographerId: userId,
+        createdAt: { lt: firstDayCurrentMonth },
+      },
+    });
+
+    const prevMonthSold = await prisma.photo.count({
+      where: {
+        photographerId: userId,
+        createdAt: { lt: firstDayCurrentMonth },
+        orderItems: { some: { order: { status: "PAID" } } },
+      },
+    });
+
+    const getTrend = (current: number, previous: number) => {
+      if (previous === 0) return current > 0 ? "+ 100%" : "+ 0%";
+      const diff = ((current - previous) / previous) * 100;
+      return `${diff >= 0 ? "+ " : "- "}${Math.abs(Math.round(diff))}%`;
+    };
+
+    const stats = {
+      totalEarnings,
+      totalSales,
+      totalSoldPhotos,
+      totalDownloadsCount,
+      totalPhotos,
+      pendingPhotos,
+      trends: {
+        earnings: getTrend(totalEarnings, prevMonthSales._sum.photographerEarnings || 0),
+        photos: getTrend(totalPhotos, prevMonthPhotos),
+        soldPhotos: getTrend(totalSoldPhotos, prevMonthSold),
+      },
+    };
+
+    // Calculate chart data (last 12 months)
+    const chartData = [];
+    for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthLabel = d.toLocaleString("default", { month: "short" });
       const year = d.getFullYear();
@@ -128,14 +174,7 @@ const getMySales = async (userId: string, locationId?: string) => {
     }
 
     return {
-      stats: {
-        totalEarnings,
-        totalSales,
-        totalSoldPhotos,
-        totalDownloadsCount,
-        totalPhotos,
-        pendingPhotos,
-      },
+      stats,
       items,
       chartData,
     };
