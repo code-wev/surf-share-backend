@@ -20,10 +20,10 @@ const createDiskStorage = (folderName: string) => {
 };
 
 // Middleware exports
-export const uploadProfile = multer({ storage: createDiskStorage("profile") });
-export const uploadAdvertisement = multer({ storage: createDiskStorage("advertisement") });
-export const uploadLocation = multer({ storage: createDiskStorage("location") });
-export const uploadPhotoMemory = multer({ storage: multer.memoryStorage() });
+export const uploadProfile = multer({ storage: createDiskStorage("profile"), limits: { fileSize: 10 * 1024 * 1024 } });
+export const uploadAdvertisement = multer({ storage: createDiskStorage("advertisement"), limits: { fileSize: 50 * 1024 * 1024 } });
+export const uploadLocation = multer({ storage: createDiskStorage("location"), limits: { fileSize: 50 * 1024 * 1024 } });
+export const uploadPhotoMemory = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 
 // Legacy export fallback if some controllers still use generic `upload`
-export const upload = multer({ storage: createDiskStorage("misc") });
+export const upload = multer({ storage: createDiskStorage("misc"), limits: { fileSize: 50 * 1024 * 1024 } });

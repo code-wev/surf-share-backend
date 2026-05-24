@@ -39,11 +39,11 @@ app.use((req, res, next) => {
   if (req.originalUrl === "/api/v1/checkout/webhook") {
     next();
   } else {
-    express.json({ limit: "1mb" })(req, res, next);
+    express.json({ limit: "1000mb" })(req, res, next);
   }
 });
 
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: "1000mb" }));
 
 // Serve static uploaded files locally
 import path from "path";
