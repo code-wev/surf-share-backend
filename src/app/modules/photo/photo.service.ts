@@ -62,6 +62,7 @@ const bulkCreatePhotos = async (
 
   const photoRecords = items.map((item) => ({
     photographerId,
+    title: item.title || null,
     imageUrl: item.imageUrl,
     locationId: item.locationId,
     price: item.price,

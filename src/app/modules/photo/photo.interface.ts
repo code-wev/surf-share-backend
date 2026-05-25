@@ -1,6 +1,7 @@
 import { PhotoStatus } from "@prisma/client";
 
 export interface IPhotoBulkItem {
+  title?: string | null;
   imageUrl: string;
   locationId: string;
   price: number;
