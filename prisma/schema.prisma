@@ -96,6 +96,7 @@ model Location {
 
 model Photo {
   id             String      @id @default(uuid())
+  title          String?
   imageUrl       String
   price          Float
   status         PhotoStatus @default(PENDING)

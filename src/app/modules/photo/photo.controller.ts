@@ -27,10 +27,11 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     throw new AppError(400, "No photos uploaded.");
   }
 
-  const { locations, prices, capturedAts, lastModifiedDates } = req.body;
+  const { locations, prices, capturedAts, lastModifiedDates, titles } = req.body;
 
   const locationsArray = Array.isArray(locations) ? locations : [locations];
   const pricesArray = Array.isArray(prices) ? prices : [prices];
+  const titlesArray = titles ? (Array.isArray(titles) ? titles : [titles]) : [];
   const capturedAtsArray = capturedAts
     ? Array.isArray(capturedAts)
       ? capturedAts
@@ -140,6 +141,7 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     const imageUrl = `/uploads/photos/${fileName}`;
 
     return {
+      title: titlesArray[index] || null,
       imageUrl,
       locationId: locationsArray[index],
       price: Number(pricesArray[index]),
