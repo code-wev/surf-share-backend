@@ -27,10 +27,15 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     throw new AppError(400, "No photos uploaded.");
   }
 
-  const { locations, prices, lastModifiedDates } = req.body;
+  const { locations, prices, capturedAts, lastModifiedDates } = req.body;
 
   const locationsArray = Array.isArray(locations) ? locations : [locations];
   const pricesArray = Array.isArray(prices) ? prices : [prices];
+  const capturedAtsArray = capturedAts
+    ? Array.isArray(capturedAts)
+      ? capturedAts
+      : [capturedAts]
+    : [];
   const lastModifiedDatesArray = lastModifiedDates
     ? Array.isArray(lastModifiedDates)
       ? lastModifiedDates
@@ -61,6 +66,16 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     console.log(`\n--- Processing File ${index + 1} ---`);
     console.log(`File Name: ${file.originalname}, Size: ${fileSize} bytes`);
 
+    const explicitCapturedAt = capturedAtsArray[index];
+
+    if (explicitCapturedAt) {
+      const parsedCapturedAt = new Date(explicitCapturedAt);
+      if (!isNaN(parsedCapturedAt.getTime())) {
+        capturedAt = parsedCapturedAt;
+        timeKey = getTimeOfDay(capturedAt);
+      }
+    }
+
     try {
       // ✅ Sharp for dimensions only — no re-encoding
       const sharpMeta = await sharp(file.buffer).metadata();
@@ -68,23 +83,25 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
       height = sharpMeta.height;
       format = sharpMeta.format;
 
-      try {
-        // ✅ Parse EXIF from original buffer — exifr handles WebP/JPEG/HEIC natively
-        const parsedExif = await exifr.parse(file.buffer, {
-          pick: ["DateTimeOriginal", "CreateDate", "ModifyDate"],
-        });
+      if (!capturedAt) {
+        try {
+          // ✅ Parse EXIF from original buffer — exifr handles WebP/JPEG/HEIC natively
+          const parsedExif = await exifr.parse(file.buffer, {
+            pick: ["DateTimeOriginal", "CreateDate", "ModifyDate"],
+          });
 
-        if (parsedExif?.DateTimeOriginal) {
-          capturedAt = new Date(parsedExif.DateTimeOriginal);
-        } else if (parsedExif?.CreateDate) {
-          capturedAt = new Date(parsedExif.CreateDate);
-        } else if (parsedExif?.ModifyDate) {
-          capturedAt = new Date(parsedExif.ModifyDate);
+          if (parsedExif?.DateTimeOriginal) {
+            capturedAt = new Date(parsedExif.DateTimeOriginal);
+          } else if (parsedExif?.CreateDate) {
+            capturedAt = new Date(parsedExif.CreateDate);
+          } else if (parsedExif?.ModifyDate) {
+            capturedAt = new Date(parsedExif.ModifyDate);
+          }
+
+          if (capturedAt) timeKey = getTimeOfDay(capturedAt);
+        } catch (exifError) {
+          console.log("exifr parsing failed:", exifError);
         }
-
-        if (capturedAt) timeKey = getTimeOfDay(capturedAt);
-      } catch (exifError) {
-        console.log("exifr parsing failed:", exifError);
       }
     } catch (e) {
       console.error("Failed to extract metadata:", e);
@@ -107,11 +124,11 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
     console.log("Saving image to disk...");
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = file.originalname.split('.').pop() || "jpg";
+    const ext = file.originalname.split(".").pop() || "jpg";
     const fileName = `${uniqueSuffix}.${ext}`;
     const uploadDir = path.join(process.cwd(), "public", "uploads", "photos");
     const filePath = path.join(uploadDir, fileName);
-    
+
     // Ensure directory exists
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
@@ -119,7 +136,7 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
     // Save buffer directly to disk
     fs.writeFileSync(filePath, file.buffer);
-    
+
     const imageUrl = `/uploads/photos/${fileName}`;
 
     return {
