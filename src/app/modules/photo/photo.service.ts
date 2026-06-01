@@ -3,6 +3,17 @@ import prisma from "../../utils/prisma";
 import type { IPhotoBulkItem, IPhotoQuery } from "./photo.interface";
 import AppError from "../../errors/AppError";
 
+function getTimeOfDay(
+  date: Date,
+): "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" {
+  const hours = date.getHours();
+  if (hours >= 4 && hours < 8) return "FIRST_LIGHT";
+  if (hours >= 8 && hours < 11) return "MORNING";
+  if (hours >= 11 && hours < 14) return "LUNCH";
+  if (hours >= 14 && hours < 19) return "AFTERNOON";
+  return "UNKNOWN";
+}
+
 const bulkCreatePhotos = async (
   photographerId: string,
   items: IPhotoBulkItem[],
@@ -348,20 +359,9 @@ const getPhotoById = async (photoId: string) => {
   return result;
 };
 
-function getTimeOfDay(
-  date: Date,
-): "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" {
-  const hours = date.getHours();
-  if (hours >= 4 && hours < 8) return "FIRST_LIGHT";
-  if (hours >= 8 && hours < 11) return "MORNING";
-  if (hours >= 11 && hours < 14) return "LUNCH";
-  if (hours >= 14 && hours < 19) return "AFTERNOON";
-  return "UNKNOWN";
-}
-
 const updatePhoto = async (
   photoId: string,
-  photographerId: string,
+  user: { id: string; role: string },
   payload: Partial<{
     title: string;
     price: number;
@@ -375,8 +375,12 @@ const updatePhoto = async (
   });
 
   if (!photo) throw new AppError(404, "Photo not found.");
-  if (photo.photographerId !== photographerId) {
-    throw new AppError(403, "You can only edit your own photos.");
+  
+  const isOwner = photo.photographerId === user.id;
+  const isAuthorized = user.role === "ADMIN" || user.role === "MODERATOR";
+
+  if (!isOwner && !isAuthorized) {
+    throw new AppError(403, "You do not have permission to edit this photo.");
   }
 
   const updateData: any = { ...payload };
@@ -419,14 +423,18 @@ const updatePhoto = async (
   return result;
 };
 
-const deletePhoto = async (photoId: string, photographerId: string) => {
+const deletePhoto = async (photoId: string, user: { id: string; role: string }) => {
   const photo = await prisma.photo.findUnique({
     where: { id: photoId },
   });
 
   if (!photo) throw new AppError(404, "Photo not found.");
-  if (photo.photographerId !== photographerId) {
-    throw new AppError(403, "You can only delete your own photos.");
+  
+  const isOwner = photo.photographerId === user.id;
+  const isAuthorized = user.role === "ADMIN" || user.role === "MODERATOR";
+
+  if (!isOwner && !isAuthorized) {
+    throw new AppError(403, "You do not have permission to delete this photo.");
   }
 
   const result = await prisma.$transaction(async (tx) => {

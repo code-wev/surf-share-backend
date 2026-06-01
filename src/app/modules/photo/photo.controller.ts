@@ -284,11 +284,11 @@ const bulkUpdatePhotoStatus: RequestHandler = catchAsync(async (req, res) => {
 const updatePhoto: RequestHandler = catchAsync(async (req, res) => {
   const raw = req.params.photoId;
   const photoId = Array.isArray(raw) ? raw[0] : raw;
-  const photographerId = req.user!.userId;
+  const user = { id: req.user!.userId, role: req.user!.role };
 
   const result = await PhotoService.updatePhoto(
     photoId as string,
-    photographerId,
+    user,
     req.body,
   );
 
@@ -303,9 +303,9 @@ const updatePhoto: RequestHandler = catchAsync(async (req, res) => {
 const deletePhoto: RequestHandler = catchAsync(async (req, res) => {
   const raw = req.params.photoId;
   const photoId = Array.isArray(raw) ? raw[0] : raw;
-  const photographerId = req.user!.userId;
+  const user = { id: req.user!.userId, role: req.user!.role };
 
-  await PhotoService.deletePhoto(photoId as string, photographerId);
+  await PhotoService.deletePhoto(photoId as string, user);
 
   sendResponse(res, {
     statusCode: 200,
