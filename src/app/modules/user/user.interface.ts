@@ -10,6 +10,7 @@ export interface IBaseUserPayload {
   countryName?: string;
   address?: string;
   phoneNumber?: string;
+  promotionEmail?: boolean;
 }
 
 export interface ISurferRegisterPayload extends IBaseUserPayload {}
@@ -50,6 +51,7 @@ export interface IUserResponse {
   permissions?: string[] | null;
   socialAccounts?: ISocialAccount[];
   profileImageUrl?: string | null;
+  promotionEmail: boolean;
 }
 
 export interface ILoginResponse {
