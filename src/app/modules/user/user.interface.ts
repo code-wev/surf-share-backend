@@ -21,8 +21,10 @@ export interface ISocialAccount {
 }
 
 export interface IPhotographerRegisterPayload extends IBaseUserPayload {
-  paypalEmail: string;
+  paypalEmail?: string;
   socialAccounts?: ISocialAccount[];
+  acceptedApproval?: boolean;
+  acceptedContributor?: boolean;
 }
 
 export interface IModeratorRegisterPayload extends IBaseUserPayload {
@@ -52,6 +54,8 @@ export interface IUserResponse {
   socialAccounts?: ISocialAccount[];
   profileImageUrl?: string | null;
   promotionEmail: boolean;
+  acceptedApproval?: boolean;
+  acceptedContributor?: boolean;
 }
 
 export interface ILoginResponse {
