@@ -18,6 +18,8 @@ type IUserUpdatePayload = {
   permissions?: User["permissions"];
   socialAccounts?: ISocialAccount[];
   promotionEmail?: boolean;
+  acceptedApproval?: boolean;
+  acceptedContributor?: boolean;
 };
 
 // Helper function to sanitize user data before sending it in responses
@@ -45,6 +47,8 @@ const sanitizeUser = (
     ? (user.socialAccount as unknown as ISocialAccount[])
     : undefined,
   promotionEmail: user.promotionEmail ?? false,
+  acceptedApproval: (user as any).acceptedApproval ?? false,
+  acceptedContributor: (user as any).acceptedContributor ?? false,
 });
 
 type UserStatsMap = Record<

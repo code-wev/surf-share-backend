@@ -71,6 +71,8 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
     : undefined,
   profileImageUrl: user.profileImageUrl ?? null,
   promotionEmail: (user as any).promotionEmail ?? false,
+  acceptedApproval: (user as any).acceptedApproval ?? false,
+  acceptedContributor: (user as any).acceptedContributor ?? false,
 });
 
 /**
@@ -151,6 +153,8 @@ const registerPhotographer = async (
       password: hashedPassword,
       role: Role.PHOTOGRAPHER,
       promotionEmail: payload.promotionEmail ?? false,
+      acceptedApproval: payload.acceptedApproval ?? false,
+      acceptedContributor: payload.acceptedContributor ?? false,
     },
   });
 

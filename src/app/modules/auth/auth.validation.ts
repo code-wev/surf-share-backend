@@ -36,10 +36,21 @@ const registerPhotographer = z.object({
     .object({
       ...baseUserValidation,
       paypalEmail: z
-        .string({ message: "Paypal email is required for photographers." })
+        .string()
         .trim()
         .email("Paypal email must be a valid email address.")
-        .transform((v) => v.toLowerCase()),
+        .optional()
+        .transform((v) => (v ? v.toLowerCase() : v)),
+      acceptedApproval: z
+        .boolean()
+        .refine((v) => v === true, {
+          message: "You must accept the approval requirement.",
+        }),
+      acceptedContributor: z
+        .boolean()
+        .refine((v) => v === true, {
+          message: "You must accept the contributor agreement.",
+        }),
       socialAccounts: z
         .array(
           z.object({
