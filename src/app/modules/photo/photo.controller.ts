@@ -281,6 +281,40 @@ const bulkUpdatePhotoStatus: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const updatePhoto: RequestHandler = catchAsync(async (req, res) => {
+  const raw = req.params.photoId;
+  const photoId = Array.isArray(raw) ? raw[0] : raw;
+  const photographerId = req.user!.userId;
+
+  const result = await PhotoService.updatePhoto(
+    photoId as string,
+    photographerId,
+    req.body,
+  );
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Photo updated successfully.",
+    data: result,
+  });
+});
+
+const deletePhoto: RequestHandler = catchAsync(async (req, res) => {
+  const raw = req.params.photoId;
+  const photoId = Array.isArray(raw) ? raw[0] : raw;
+  const photographerId = req.user!.userId;
+
+  await PhotoService.deletePhoto(photoId as string, photographerId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Photo deleted successfully.",
+    data: null,
+  });
+});
+
 export const PhotoController = {
   uploadPhotos,
   getAllPhotos,
@@ -289,4 +323,6 @@ export const PhotoController = {
   updatePhotoStatus,
   bulkUpdatePhotoStatus,
   getPhotoById,
+  updatePhoto,
+  deletePhoto,
 };
