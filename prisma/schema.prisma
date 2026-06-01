@@ -36,6 +36,7 @@ model User {
 
   // Auth
   refreshToken       String?
+  promotionEmail     Boolean               @default(false)
   
   photos             Photo[]
   favorites          Favorite[]

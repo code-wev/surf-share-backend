@@ -5,6 +5,7 @@ import type { IUserResponse, ISocialAccount } from "./user.interface";
 
 type UserWithSocialAccount = User & {
   socialAccount?: Prisma.JsonValue | null;
+  promotionEmail?: boolean;
 };
 
 type IUserUpdatePayload = {
@@ -12,11 +13,11 @@ type IUserUpdatePayload = {
   countryName?: string;
   address?: string;
   phoneNumber?: string;
-  paypalEmail?:
-   string;
+  paypalEmail?: string;
   profileImageUrl?: string;
   permissions?: User["permissions"];
   socialAccounts?: ISocialAccount[];
+  promotionEmail?: boolean;
 };
 
 // Helper function to sanitize user data before sending it in responses
@@ -43,6 +44,7 @@ const sanitizeUser = (
   socialAccounts: user.socialAccount
     ? (user.socialAccount as unknown as ISocialAccount[])
     : undefined,
+  promotionEmail: user.promotionEmail ?? false,
 });
 
 type UserStatsMap = Record<

@@ -24,6 +24,7 @@ const baseUserValidation = {
   countryName: z.string().optional(),
   address: z.string().optional(),
   phoneNumber: z.string().optional(),
+  promotionEmail: z.boolean().optional(),
 };
 
 const registerSurfer = z.object({
