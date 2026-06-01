@@ -10,6 +10,7 @@ export interface IBaseUserPayload {
   countryName?: string;
   address?: string;
   phoneNumber?: string;
+  promotionEmail?: boolean;
 }
 
 export interface ISurferRegisterPayload extends IBaseUserPayload {}
@@ -20,8 +21,10 @@ export interface ISocialAccount {
 }
 
 export interface IPhotographerRegisterPayload extends IBaseUserPayload {
-  paypalEmail: string;
+  paypalEmail?: string;
   socialAccounts?: ISocialAccount[];
+  acceptedApproval?: boolean;
+  acceptedContributor?: boolean;
 }
 
 export interface IModeratorRegisterPayload extends IBaseUserPayload {
@@ -50,6 +53,9 @@ export interface IUserResponse {
   permissions?: string[] | null;
   socialAccounts?: ISocialAccount[];
   profileImageUrl?: string | null;
+  promotionEmail: boolean;
+  acceptedApproval?: boolean;
+  acceptedContributor?: boolean;
 }
 
 export interface ILoginResponse {

@@ -3,6 +3,17 @@ import prisma from "../../utils/prisma";
 import type { IPhotoBulkItem, IPhotoQuery } from "./photo.interface";
 import AppError from "../../errors/AppError";
 
+function getTimeOfDay(
+  date: Date,
+): "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" {
+  const hours = date.getHours();
+  if (hours >= 4 && hours < 8) return "FIRST_LIGHT";
+  if (hours >= 8 && hours < 11) return "MORNING";
+  if (hours >= 11 && hours < 14) return "LUNCH";
+  if (hours >= 14 && hours < 19) return "AFTERNOON";
+  return "UNKNOWN";
+}
+
 const bulkCreatePhotos = async (
   photographerId: string,
   items: IPhotoBulkItem[],
@@ -348,6 +359,100 @@ const getPhotoById = async (photoId: string) => {
   return result;
 };
 
+const updatePhoto = async (
+  photoId: string,
+  user: { id: string; role: string },
+  payload: Partial<{
+    title: string;
+    price: number;
+    locationId: string;
+    capturedAt: string;
+    timeKey: string;
+  }>,
+) => {
+  const photo = await prisma.photo.findUnique({
+    where: { id: photoId },
+  });
+
+  if (!photo) throw new AppError(404, "Photo not found.");
+  
+  const isOwner = photo.photographerId === user.id;
+  const isAuthorized = user.role === "ADMIN" || user.role === "MODERATOR";
+
+  if (!isOwner && !isAuthorized) {
+    throw new AppError(403, "You do not have permission to edit this photo.");
+  }
+
+  const updateData: any = { ...payload };
+
+  // Re-calculate timeKey if capturedAt is provided but timeKey is not
+  if (payload.capturedAt && !payload.timeKey) {
+    const date = new Date(payload.capturedAt);
+    if (!isNaN(date.getTime())) {
+      updateData.timeKey = getTimeOfDay(date);
+    }
+  }
+
+  // Handle location change
+  if (payload.locationId && payload.locationId !== photo.locationId) {
+    return await prisma.$transaction(async (tx) => {
+      // Decrement old location count
+      await tx.location.update({
+        where: { id: photo.locationId },
+        data: { photosAvailable: { decrement: 1 } },
+      });
+
+      // Increment new location count
+      await tx.location.update({
+        where: { id: payload.locationId },
+        data: { photosAvailable: { increment: 1 } },
+      });
+
+      // Update photo
+      return await tx.photo.update({
+        where: { id: photoId },
+        data: updateData,
+      });
+    });
+  }
+
+  const result = await prisma.photo.update({
+    where: { id: photoId },
+    data: updateData,
+  });
+  return result;
+};
+
+const deletePhoto = async (photoId: string, user: { id: string; role: string }) => {
+  const photo = await prisma.photo.findUnique({
+    where: { id: photoId },
+  });
+
+  if (!photo) throw new AppError(404, "Photo not found.");
+  
+  const isOwner = photo.photographerId === user.id;
+  const isAuthorized = user.role === "ADMIN" || user.role === "MODERATOR";
+
+  if (!isOwner && !isAuthorized) {
+    throw new AppError(403, "You do not have permission to delete this photo.");
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    // Decrement location count
+    await tx.location.update({
+      where: { id: photo.locationId },
+      data: { photosAvailable: { decrement: 1 } },
+    });
+
+    // Delete photo
+    return await tx.photo.delete({
+      where: { id: photoId },
+    });
+  });
+
+  return result;
+};
+
 export const PhotoService = {
   bulkCreatePhotos,
   getAllPhotos,
@@ -356,4 +461,6 @@ export const PhotoService = {
   bulkUpdatePhotoStatus,
   getPhotoById,
   getPhotosByPhotographerId,
+  updatePhoto,
+  deletePhoto,
 };

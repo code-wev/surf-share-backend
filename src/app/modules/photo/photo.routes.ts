@@ -32,6 +32,21 @@ router.post(
   PhotoController.bulkUpdatePhotoStatus,
 );
 
+// Update photo details (by photographer/admin/moderator)
+router.patch(
+  "/:photoId",
+  auth("PHOTOGRAPHER", "ADMIN", "MODERATOR"),
+  validateRequest(PhotoValidation.updatePhoto),
+  PhotoController.updatePhoto,
+);
+
+// Delete photo (by photographer/admin/moderator)
+router.delete(
+  "/:photoId",
+  auth("PHOTOGRAPHER", "ADMIN", "MODERATOR"),
+  PhotoController.deletePhoto,
+);
+
 // Get photos by photographer ID (public/admin)
 router.get("/:photographerId", PhotoController.getPhotosByPhotographerId);
 
