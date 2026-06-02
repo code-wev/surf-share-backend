@@ -17,8 +17,7 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     throw new AppError(400, "No photos uploaded.");
   }
 
-  const { locations, prices, capturedAts, lastModifiedDates, titles } =
-    req.body;
+  const { locations, prices, capturedAts, lastModifiedDates, titles } = req.body;
 
   const locationsArray = Array.isArray(locations) ? locations : [locations];
   const pricesArray = Array.isArray(prices) ? prices : [prices];
@@ -76,7 +75,7 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
       if (!capturedAt) {
         try {
-          // ✅ Parse EXIF from original buffer — exifr handles WebP/JPEG/HEIC natively
+          // Parse EXIF from original buffer — exifr handles WebP/JPEG/HEIC natively
           const parsedExif = await exifr.parse(file.buffer, {
             pick: ["DateTimeOriginal", "CreateDate", "ModifyDate"],
           });
@@ -157,6 +156,18 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
 const getAllPhotos: RequestHandler = catchAsync(async (req, res) => {
   const result = await PhotoService.getAllPhotos(req.query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Photos retrieved successfully.",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const getPhotosForModerator: RequestHandler = catchAsync(async (req, res) => {
+  const result = await PhotoService.getPhotosForModerator(req.query as unknown as IPhotoQuery);
 
   sendResponse(res, {
     statusCode: 200,
@@ -308,6 +319,7 @@ const deletePhoto: RequestHandler = catchAsync(async (req, res) => {
 export const PhotoController = {
   uploadPhotos,
   getAllPhotos,
+  getPhotosForModerator,
   getMyPhotos,
   getPhotosByPhotographerId,
   updatePhotoStatus,

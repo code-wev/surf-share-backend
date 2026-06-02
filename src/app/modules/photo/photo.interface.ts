@@ -18,6 +18,7 @@ export interface IPhotoQuery {
   limit?: string;
   status?: PhotoStatus;
   locationId?: string;
+  photographerId?: string;
 }
 
 export interface IPhotoBulkCreatePayload {
