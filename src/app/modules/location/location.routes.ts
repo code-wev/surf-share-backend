@@ -9,6 +9,8 @@ const router = Router();
 
 router.get("/map-data", LocationController.getMapData);
 
+router.get("/hierarchy", LocationController.getHierarchy);
+
 router.get("/", LocationController.getAllLocations);
 
 router.post(

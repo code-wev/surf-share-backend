@@ -9,17 +9,7 @@ import fs from "fs";
 import path from "path";
 import { PhotoStatus } from "@prisma/client";
 import { IPhotoQuery } from "./photo.interface";
-
-function getTimeOfDay(
-  date: Date,
-): "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" {
-  const hours = date.getHours();
-  if (hours >= 4 && hours < 8) return "FIRST_LIGHT";
-  if (hours >= 8 && hours < 11) return "MORNING";
-  if (hours >= 11 && hours < 14) return "LUNCH";
-  if (hours >= 14 && hours < 19) return "AFTERNOON";
-  return "UNKNOWN";
-}
+import { getTimeOfDay } from "../../utils/timeUtils";
 
 const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
   const files = req.files as Express.Multer.File[];
@@ -27,7 +17,8 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     throw new AppError(400, "No photos uploaded.");
   }
 
-  const { locations, prices, capturedAts, lastModifiedDates, titles } = req.body;
+  const { locations, prices, capturedAts, lastModifiedDates, titles } =
+    req.body;
 
   const locationsArray = Array.isArray(locations) ? locations : [locations];
   const pricesArray = Array.isArray(prices) ? prices : [prices];
@@ -57,8 +48,7 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
   const uploadPromises = files.map(async (file, index) => {
     let capturedAt: Date | undefined;
-    let timeKey: "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" =
-      "UNKNOWN";
+    let timeKey: string = "UNKNOWN";
     let width: number | undefined;
     let height: number | undefined;
     let format: string | undefined;
@@ -78,7 +68,7 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     }
 
     try {
-      // ✅ Sharp for dimensions only — no re-encoding
+      // Sharp for dimensions only — no re-encoding
       const sharpMeta = await sharp(file.buffer).metadata();
       width = sharpMeta.width;
       height = sharpMeta.height;

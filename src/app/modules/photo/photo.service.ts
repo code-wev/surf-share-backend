@@ -191,7 +191,20 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
   }
 
   if (timeKey && timeKey !== "all" && typeof timeKey === "string") {
-    filter.timeKey = timeKey.toUpperCase();
+    // Map new filter keys to both old and new DB values for compatibility
+    const timeKeyMapping: Record<string, string[]> = {
+      "5_8": ["5_8", "FIRST_LIGHT"],
+      "8_11": ["8_11", "MORNING"],
+      "11_14": ["11_14", "LUNCH"],
+      "14_17": ["14_17", "AFTERNOON"],
+      "17_20": ["17_20"],
+      "20_23": ["20_23"],
+      "23_5": ["23_5"],
+    };
+    
+    const keysToMatch = timeKeyMapping[timeKey] || [timeKey];
+    console.log("Filtering by timeKey:", keysToMatch);
+    filter.timeKey = { in: keysToMatch };
   }
 
   if (tab && tab !== "all" && typeof tab === "string") {
