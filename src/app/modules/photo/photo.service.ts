@@ -279,6 +279,66 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
   };
 };
 
+const getPhotosForModerator = async (query: IPhotoQuery) => {
+  const { page = "1", limit = "100", status, locationId, photographerId } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const where: Prisma.PhotoWhereInput = {};
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (locationId) {
+    where.locationId = locationId;
+  }
+  
+  if (photographerId) {
+    where.photographerId = photographerId;
+  }
+
+  const [photos, total] = await Promise.all([
+    prisma.photo.findMany({
+      where,
+      include: {
+        location: {
+          select: {
+            id: true,
+            name: true,
+            state: true,
+            region: true,
+          },
+        },
+        photographer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: limitNumber,
+    }),
+    prisma.photo.count({ where }),
+  ]);
+
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPages: Math.ceil(total / limitNumber),
+    },
+    data: photos,
+  };
+};
+
 const getPhotosByPhotographerId = async (
   photographerId: string,
   query: IPhotoQuery,
@@ -470,6 +530,7 @@ export const PhotoService = {
   bulkCreatePhotos,
   getAllPhotos,
   getMyPhotos,
+  getPhotosForModerator,
   updatePhotoStatus,
   bulkUpdatePhotoStatus,
   getPhotoById,
