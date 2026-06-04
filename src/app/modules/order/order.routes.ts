@@ -6,4 +6,6 @@ const router = Router();
 
 router.get("/my-orders", auth(), OrderController.getMyOrders);
 
+router.delete("/:orderId", auth(), OrderController.deleteOrder);
+
 export const OrderRoutes = router;
