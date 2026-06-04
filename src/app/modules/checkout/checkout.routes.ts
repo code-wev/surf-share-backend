@@ -13,6 +13,12 @@ router.post(
   CheckoutController.createSession,
 );
 
+router.post(
+  "/retry-payment",
+  auth("SURFER", "PHOTOGRAPHER", "MODERATOR", "ADMIN"),
+  CheckoutController.retryPayment,
+);
+
 // The webhook route is mapped in app.ts to use express.raw()
 router.post(
   "/webhook",
