@@ -191,7 +191,20 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
   }
 
   if (timeKey && timeKey !== "all" && typeof timeKey === "string") {
-    filter.timeKey = timeKey.toUpperCase();
+    // Map new filter keys to both old and new DB values for compatibility
+    const timeKeyMapping: Record<string, string[]> = {
+      "5_8": ["5_8", "FIRST_LIGHT"],
+      "8_11": ["8_11", "MORNING"],
+      "11_14": ["11_14", "LUNCH"],
+      "14_17": ["14_17", "AFTERNOON"],
+      "17_20": ["17_20"],
+      "20_23": ["20_23"],
+      "23_5": ["23_5"],
+    };
+    
+    const keysToMatch = timeKeyMapping[timeKey] || [timeKey];
+    console.log("Filtering by timeKey:", keysToMatch);
+    filter.timeKey = { in: keysToMatch };
   }
 
   if (tab && tab !== "all" && typeof tab === "string") {
@@ -253,6 +266,66 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
   const [photos, total] = await Promise.all([
     prisma.photo.findMany(queryOptions),
     prisma.photo.count({ where: filter }),
+  ]);
+
+  return {
+    meta: {
+      page: pageNumber,
+      limit: limitNumber,
+      total,
+      totalPages: Math.ceil(total / limitNumber),
+    },
+    data: photos,
+  };
+};
+
+const getPhotosForModerator = async (query: IPhotoQuery) => {
+  const { page = "1", limit = "100", status, locationId, photographerId } = query;
+  const pageNumber = Number(page);
+  const limitNumber = Number(limit);
+  const skip = (pageNumber - 1) * limitNumber;
+
+  const where: Prisma.PhotoWhereInput = {};
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (locationId) {
+    where.locationId = locationId;
+  }
+  
+  if (photographerId) {
+    where.photographerId = photographerId;
+  }
+
+  const [photos, total] = await Promise.all([
+    prisma.photo.findMany({
+      where,
+      include: {
+        location: {
+          select: {
+            id: true,
+            name: true,
+            state: true,
+            region: true,
+          },
+        },
+        photographer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip,
+      take: limitNumber,
+    }),
+    prisma.photo.count({ where }),
   ]);
 
   return {
@@ -457,6 +530,7 @@ export const PhotoService = {
   bulkCreatePhotos,
   getAllPhotos,
   getMyPhotos,
+  getPhotosForModerator,
   updatePhotoStatus,
   bulkUpdatePhotoStatus,
   getPhotoById,

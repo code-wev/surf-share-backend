@@ -10,6 +10,9 @@ const uploadMemory = multer({ storage: multer.memoryStorage() });
 
 router.get("/my-uploads", auth("PHOTOGRAPHER"), PhotoController.getMyPhotos);
 
+// Moderator endpoint
+router.get("/moderator-uploads", auth("ADMIN", "MODERATOR"), PhotoController.getPhotosForModerator);
+
 // Public gallery endpoint
 router.get("/", PhotoController.getAllPhotos);
 

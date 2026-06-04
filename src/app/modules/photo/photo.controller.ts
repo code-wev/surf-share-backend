@@ -9,17 +9,7 @@ import fs from "fs";
 import path from "path";
 import { PhotoStatus } from "@prisma/client";
 import { IPhotoQuery } from "./photo.interface";
-
-function getTimeOfDay(
-  date: Date,
-): "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" {
-  const hours = date.getHours();
-  if (hours >= 4 && hours < 8) return "FIRST_LIGHT";
-  if (hours >= 8 && hours < 11) return "MORNING";
-  if (hours >= 11 && hours < 14) return "LUNCH";
-  if (hours >= 14 && hours < 19) return "AFTERNOON";
-  return "UNKNOWN";
-}
+import { getTimeOfDay } from "../../utils/timeUtils";
 
 const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
   const files = req.files as Express.Multer.File[];
@@ -59,8 +49,7 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
   const uploadPromises = files.map(async (file, index) => {
     let capturedAt: Date | undefined;
-    let timeKey: "FIRST_LIGHT" | "MORNING" | "LUNCH" | "AFTERNOON" | "UNKNOWN" =
-      "UNKNOWN";
+    let timeKey: string = "UNKNOWN";
     let width: number | undefined;
     let height: number | undefined;
     let format: string | undefined;
@@ -85,7 +74,7 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     }
 
     try {
-      // ✅ Sharp for dimensions only — no re-encoding
+      // Sharp for dimensions only — no re-encoding
       const sharpMeta = await sharp(file.buffer).metadata();
       width = sharpMeta.width;
       height = sharpMeta.height;
@@ -93,7 +82,7 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
       if (!capturedAt) {
         try {
-          // ✅ Parse EXIF from original buffer — exifr handles WebP/JPEG/HEIC natively
+          // Parse EXIF from original buffer — exifr handles WebP/JPEG/HEIC natively
           const parsedExif = await exifr.parse(file.buffer, {
             pick: ["DateTimeOriginal", "CreateDate", "ModifyDate"],
           });
@@ -174,6 +163,18 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
 const getAllPhotos: RequestHandler = catchAsync(async (req, res) => {
   const result = await PhotoService.getAllPhotos(req.query);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Photos retrieved successfully.",
+    meta: result.meta,
+    data: result.data,
+  });
+});
+
+const getPhotosForModerator: RequestHandler = catchAsync(async (req, res) => {
+  const result = await PhotoService.getPhotosForModerator(req.query as unknown as IPhotoQuery);
 
   sendResponse(res, {
     statusCode: 200,
@@ -325,6 +326,7 @@ const deletePhoto: RequestHandler = catchAsync(async (req, res) => {
 export const PhotoController = {
   uploadPhotos,
   getAllPhotos,
+  getPhotosForModerator,
   getMyPhotos,
   getPhotosByPhotographerId,
   updatePhotoStatus,
