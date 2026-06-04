@@ -45,6 +45,8 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
   const photographerId = req.user!.userId;
 
+  const allowedPrices = [0, 2.99, 4.99, 9.99, 14.99, 19.99, 29.99, 39.99, 49.99];
+
   const uploadPromises = files.map(async (file, index) => {
     let capturedAt: Date | undefined;
     let timeKey: string = "UNKNOWN";
@@ -52,6 +54,11 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     let height: number | undefined;
     let format: string | undefined;
     const fileSize = file.size; // from multer memory storage
+    const priceValue = Number(pricesArray[index]);
+
+    if (!allowedPrices.includes(priceValue)) {
+      throw new AppError(400, `Invalid price ${priceValue}. Allowed values are: ${allowedPrices.join(", ")}`);
+    }
 
     console.log(`\n--- Processing File ${index + 1} ---`);
     console.log(`File Name: ${file.originalname}, Size: ${fileSize} bytes`);

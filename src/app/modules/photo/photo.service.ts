@@ -456,6 +456,13 @@ const updatePhoto = async (
     throw new AppError(403, "You do not have permission to edit this photo.");
   }
 
+  if (payload.price !== undefined) {
+    const allowedPrices = [0, 2.99, 4.99, 9.99, 14.99, 19.99, 29.99, 39.99, 49.99];
+    if (!allowedPrices.includes(payload.price)) {
+      throw new AppError(400, `Invalid price ${payload.price}. Allowed values are: ${allowedPrices.join(", ")}`);
+    }
+  }
+
   const updateData: any = { ...payload };
 
   // Re-calculate timeKey if capturedAt is provided but timeKey is not
