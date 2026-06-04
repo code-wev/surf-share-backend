@@ -204,8 +204,73 @@ const getPurchasedPhotos = async (userId: string) => {
   });
 };
 
+const retryPayment = async (userId: string, orderId: string) => {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId, userId },
+    include: {
+      items: {
+        include: {
+          photo: {
+            include: {
+              photographer: { select: { name: true } }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  if (!order) {
+    throw new AppError(404, "Order not found.");
+  }
+
+  if (order.status === "PAID") {
+    throw new AppError(400, "Order is already paid.");
+  }
+
+  type LocalLineItem = {
+    price_data: {
+      currency: string;
+      product_data: { name: string; images?: string[] };
+      unit_amount: number;
+    };
+    quantity: number;
+  };
+
+  const lineItems: LocalLineItem[] = order.items.map((item) => ({
+    price_data: {
+      currency: "usd",
+      product_data: {
+        name: `Photo by ${item.photo.photographer.name}`,
+        images: [item.photo.imageUrl.startsWith("http") ? item.photo.imageUrl : `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000'}${item.photo.imageUrl}`],
+      },
+      unit_amount: Math.round(item.price * 100),
+    },
+    quantity: 1,
+  }));
+
+  // Create new Stripe Session
+  const session = await stripe.checkout.sessions.create({
+    line_items: lineItems,
+    mode: "payment",
+    success_url: `${config.stripe.frontendUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${config.stripe.frontendUrl}/cart`,
+    client_reference_id: order.id,
+    customer_email: (await prisma.user.findUnique({ where: { id: userId } }))?.email,
+  });
+
+  // Update order with new stripeSessionId
+  await prisma.order.update({
+    where: { id: order.id },
+    data: { stripeSessionId: session.id },
+  });
+
+  return { url: session.url, sessionId: session.id };
+};
+
 export const CheckoutService = {
   createSession,
+  retryPayment,
   handleWebhook,
   verifySession,
   getPurchasedPhotoIds,

@@ -73,8 +73,27 @@ const getPurchasedPhotos: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const retryPayment: RequestHandler = catchAsync(async (req, res) => {
+  const userId = req.user!.userId;
+  const { orderId } = req.body;
+
+  if (!orderId) {
+    throw new AppError(400, "Order ID is required");
+  }
+
+  const result = await CheckoutService.retryPayment(userId, orderId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Checkout session created successfully",
+    data: result,
+  });
+});
+
 export const CheckoutController = {
   createSession,
+  retryPayment,
   stripeWebhook,
   verifySession,
   getPurchasedPhotoIds,
