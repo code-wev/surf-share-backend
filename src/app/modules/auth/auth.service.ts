@@ -70,6 +70,9 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
     ? (user.socialAccount as unknown as ISocialAccount[])
     : undefined,
   profileImageUrl: user.profileImageUrl ?? null,
+  promotionEmail: (user as any).promotionEmail ?? false,
+  acceptedApproval: (user as any).acceptedApproval ?? false,
+  acceptedContributor: (user as any).acceptedContributor ?? false,
 });
 
 /**
@@ -120,6 +123,7 @@ const registerSurfer = async (
       phoneNumber: payload.phoneNumber,
       password: hashedPassword,
       role: Role.SURFER,
+      promotionEmail: payload.promotionEmail ?? false,
     },
   });
 
@@ -148,6 +152,9 @@ const registerPhotographer = async (
         []) as unknown as Prisma.InputJsonValue,
       password: hashedPassword,
       role: Role.PHOTOGRAPHER,
+      promotionEmail: payload.promotionEmail ?? false,
+      acceptedApproval: payload.acceptedApproval ?? false,
+      acceptedContributor: payload.acceptedContributor ?? false,
     },
   });
 
@@ -175,6 +182,7 @@ const registerModerator = async (
       permissions: payload.permissions,
       password: hashedPassword,
       role: Role.MODERATOR,
+      promotionEmail: payload.promotionEmail ?? false,
     },
   });
 

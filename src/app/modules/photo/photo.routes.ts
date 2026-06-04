@@ -10,6 +10,9 @@ const uploadMemory = multer({ storage: multer.memoryStorage() });
 
 router.get("/my-uploads", auth("PHOTOGRAPHER"), PhotoController.getMyPhotos);
 
+// Moderator endpoint
+router.get("/moderator-uploads", auth("ADMIN", "MODERATOR"), PhotoController.getPhotosForModerator);
+
 // Public gallery endpoint
 router.get("/", PhotoController.getAllPhotos);
 
@@ -30,6 +33,21 @@ router.post(
   auth("ADMIN", "MODERATOR"),
   validateRequest(PhotoValidation.bulkUpdatePhotoStatus),
   PhotoController.bulkUpdatePhotoStatus,
+);
+
+// Update photo details (by photographer/admin/moderator)
+router.patch(
+  "/:photoId",
+  auth("PHOTOGRAPHER", "ADMIN", "MODERATOR"),
+  validateRequest(PhotoValidation.updatePhoto),
+  PhotoController.updatePhoto,
+);
+
+// Delete photo (by photographer/admin/moderator)
+router.delete(
+  "/:photoId",
+  auth("PHOTOGRAPHER", "ADMIN", "MODERATOR"),
+  PhotoController.deletePhoto,
 );
 
 // Get photos by photographer ID (public/admin)

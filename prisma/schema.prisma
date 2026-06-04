@@ -21,6 +21,9 @@ model User {
   
   // Specific to PHOTOGRAPHER
   paypalEmail        String?
+  // Contributor agreements (shortened names)
+  acceptedApproval Boolean? @default(false)
+  acceptedContributor Boolean? @default(false)
 
   // Specific to CONTRIBUTOR/PHOTOGRAPHER
   socialAccount      Json?
@@ -36,6 +39,7 @@ model User {
 
   // Auth
   refreshToken       String?
+  promotionEmail     Boolean               @default(false)
   
   photos             Photo[]
   favorites          Favorite[]

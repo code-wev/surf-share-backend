@@ -16,6 +16,17 @@ const getAllLocations: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const getHierarchy: RequestHandler = catchAsync(async (req, res) => {
+  const result = await LocationService.getHierarchy();
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Location hierarchy retrieved successfully.",
+    data: result,
+  });
+});
+
 const createLocation: RequestHandler = catchAsync(async (req, res) => {
   const file = req.file;
 
@@ -85,6 +96,7 @@ const getMapData: RequestHandler = catchAsync(async (req, res) => {
 
 export const LocationController = {
   getAllLocations,
+  getHierarchy,
   createLocation,
   updateLocation,
   deleteLocation,

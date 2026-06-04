@@ -79,6 +79,31 @@ const getAllLocations = async (query: Record<string, unknown>) => {
   };
 };
 
+const getHierarchy = async () => {
+  const locations = await prisma.location.findMany({
+    select: {
+      id: true,
+      name: true,
+      region: true,
+      state: true,
+    },
+  });
+
+  const hierarchy: any = {};
+
+  locations.forEach((loc) => {
+    if (!hierarchy[loc.state]) {
+      hierarchy[loc.state] = {};
+    }
+    if (!hierarchy[loc.state][loc.region]) {
+      hierarchy[loc.state][loc.region] = [];
+    }
+    hierarchy[loc.state][loc.region].push({ id: loc.id, name: loc.name });
+  });
+
+  return hierarchy;
+};
+
 const createLocation = async (
   payload: ILocationCreatePayload,
   fileName: string,
@@ -198,6 +223,7 @@ const getMapData = async () => {
 
 export const LocationService = {
   getAllLocations,
+  getHierarchy,
   createLocation,
   updateLocation,
   deleteLocation,
