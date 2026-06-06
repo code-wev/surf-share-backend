@@ -10,7 +10,7 @@ const router = Router();
 router.post(
   "/upload",
   auth("PHOTOGRAPHER", "ADMIN"),
-  uploadPhotoMemory.array("files", 50),
+  uploadPhotoMemory.array("photos", 50),
   PhotoController.uploadPhotos,
 );
 
