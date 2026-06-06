@@ -361,6 +361,29 @@ const deletePhoto: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const downloadOriginalPhoto: RequestHandler = catchAsync(async (req, res) => {
+  const raw = req.params.photoId;
+  const photoId = Array.isArray(raw) ? raw[0] : raw;
+  const user = { id: req.user!.userId, role: req.user!.role };
+
+  const originalPath = await PhotoService.getSecureDownloadPath(photoId as string, user);
+
+  if (!originalPath || !fs.existsSync(originalPath)) {
+    throw new AppError(404, "Original file is missing or corrupted on the server.");
+  }
+
+  const fileName = path.basename(originalPath);
+  
+  res.download(originalPath, `SurfShare-Original-${fileName}`, (err) => {
+    if (err) {
+      console.error("Download stream error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, message: "Failed to stream download." });
+      }
+    }
+  });
+});
+
 export const PhotoController = {
   uploadPhotos,
   getAllPhotos,
@@ -372,4 +395,5 @@ export const PhotoController = {
   getPhotoById,
   updatePhoto,
   deletePhoto,
+  downloadOriginalPhoto,
 };

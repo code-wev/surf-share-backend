@@ -533,6 +533,43 @@ const deletePhoto = async (photoId: string, user: { id: string; role: string }) 
   return result;
 };
 
+const getSecureDownloadPath = async (photoId: string, user: { id: string; role: string }) => {
+  const photo = await prisma.photo.findUnique({
+    where: { id: photoId },
+  });
+
+  if (!photo) {
+    throw new AppError(404, "Photo not found.");
+  }
+
+  // 1. Is the user the photographer?
+  if (photo.photographerId === user.id) {
+    return photo.originalUrl;
+  }
+
+  // 2. Is the user an Admin or Moderator?
+  if (user.role === "ADMIN" || user.role === "MODERATOR") {
+    return photo.originalUrl;
+  }
+
+  // 3. Did the user purchase the photo?
+  const hasPurchased = await prisma.orderItem.findFirst({
+    where: {
+      photoId,
+      order: {
+        userId: user.id,
+        status: "PAID"
+      }
+    }
+  });
+
+  if (hasPurchased) {
+    return photo.originalUrl;
+  }
+
+  throw new AppError(403, "You must purchase this photo to download the high-resolution original.");
+};
+
 export const PhotoService = {
   bulkCreatePhotos,
   getAllPhotos,
@@ -544,4 +581,5 @@ export const PhotoService = {
   getPhotosByPhotographerId,
   updatePhoto,
   deletePhoto,
+  getSecureDownloadPath,
 };

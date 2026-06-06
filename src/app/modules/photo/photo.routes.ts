@@ -1,65 +1,64 @@
 import { Router } from "express";
-import multer from "multer";
 import auth from "../../middlewares/auth";
-import validateRequest from "../../middlewares/validateRequest";
+import { uploadPhotoMemory } from "../../utils/upload";
 import { PhotoController } from "./photo.controller";
+import validateRequest from "../../middlewares/validateRequest";
 import { PhotoValidation } from "./photo.validation";
 
 const router = Router();
-const uploadMemory = multer({ storage: multer.memoryStorage() });
 
-router.get("/my-uploads", auth("PHOTOGRAPHER"), PhotoController.getMyPhotos);
+router.post(
+  "/upload",
+  auth("PHOTOGRAPHER", "ADMIN"),
+  uploadPhotoMemory.array("files", 50),
+  PhotoController.uploadPhotos,
+);
 
-// Moderator endpoint
-router.get("/moderator-uploads", auth("ADMIN", "MODERATOR"), PhotoController.getPhotosForModerator);
+router.get("/my-photos", auth("PHOTOGRAPHER"), PhotoController.getMyPhotos);
 
-// Public gallery endpoint
-router.get("/", PhotoController.getAllPhotos);
+router.get("/moderator", auth("MODERATOR", "ADMIN"), PhotoController.getPhotosForModerator);
 
-// Get photo by ID
-router.get("/detail/:photoId", PhotoController.getPhotoById);
-
-// Update photo status (single)
 router.patch(
-  "/:photoId/status",
-  auth("ADMIN", "MODERATOR"),
+  "/status/:photoId",
+  auth("MODERATOR", "ADMIN"),
   validateRequest(PhotoValidation.updatePhotoStatus),
   PhotoController.updatePhotoStatus,
 );
 
-// Update photo status (bulk)
-router.post(
+router.patch(
   "/bulk-status",
-  auth("ADMIN", "MODERATOR"),
+  auth("MODERATOR", "ADMIN"),
   validateRequest(PhotoValidation.bulkUpdatePhotoStatus),
   PhotoController.bulkUpdatePhotoStatus,
 );
 
-// Update photo details (by photographer/admin/moderator)
 router.patch(
   "/:photoId",
-  auth("PHOTOGRAPHER", "ADMIN", "MODERATOR"),
+  auth("PHOTOGRAPHER", "MODERATOR", "ADMIN"),
   validateRequest(PhotoValidation.updatePhoto),
   PhotoController.updatePhoto,
 );
 
-// Delete photo (by photographer/admin/moderator)
 router.delete(
   "/:photoId",
-  auth("PHOTOGRAPHER", "ADMIN", "MODERATOR"),
+  auth("PHOTOGRAPHER", "MODERATOR", "ADMIN"),
   PhotoController.deletePhoto,
 );
 
-// Get photos by photographer ID (public/admin)
-router.get("/:photographerId", PhotoController.getPhotosByPhotographerId);
-
-// Max 20 photos at a time
-router.post(
-  "/bulk",
-  auth("PHOTOGRAPHER"),
-  uploadMemory.array("photos", 20),
-  validateRequest(PhotoValidation.uploadPhotos),
-  PhotoController.uploadPhotos,
+// Secure Download Endpoint
+router.get(
+  "/:photoId/download",
+  auth("SURFER", "PHOTOGRAPHER", "MODERATOR", "ADMIN"),
+  PhotoController.downloadOriginalPhoto,
 );
+
+router.get(
+  "/photographer/:photographerId",
+  PhotoController.getPhotosByPhotographerId,
+);
+
+router.get("/:photoId", PhotoController.getPhotoById);
+
+router.get("/", PhotoController.getAllPhotos);
 
 export const PhotoRoutes = router;
