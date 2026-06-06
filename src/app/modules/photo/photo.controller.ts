@@ -119,26 +119,64 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
       console.log("No EXIF and no fallback date available.");
     }
 
-    console.log("Saving image to disk...");
+    console.log("Saving dual images to disk...");
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
     const ext = file.originalname.split(".").pop() || "jpg";
-    const fileName = `${uniqueSuffix}.${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "photos");
-    const filePath = path.join(uploadDir, fileName);
+    const originalFileName = `${uniqueSuffix}-original.${ext}`;
+    const previewFileName = `${uniqueSuffix}-preview.jpg`;
 
-    // Ensure directory exists
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    const originalsDir = path.join(process.cwd(), "public", "originals");
+    const previewsDir = path.join(process.cwd(), "public", "uploads", "photos");
+
+    if (!fs.existsSync(originalsDir)) {
+      fs.mkdirSync(originalsDir, { recursive: true });
+    }
+    if (!fs.existsSync(previewsDir)) {
+      fs.mkdirSync(previewsDir, { recursive: true });
     }
 
-    // Save buffer directly to disk
-    fs.writeFileSync(filePath, file.buffer);
+    const originalPath = path.join(originalsDir, originalFileName);
+    const previewPath = path.join(previewsDir, previewFileName);
 
-    const imageUrl = `/uploads/photos/${fileName}`;
+    // 1. Vault: Save raw original file
+    fs.writeFileSync(originalPath, file.buffer);
+
+    // 2. Compression Logic
+    const isMassiveFile = fileSize > 10 * 1024 * 1024; // > 10MB
+    const compressionQuality = isMassiveFile ? 40 : 70; 
+
+    // 3. Generate initial resized buffer to get exact dimensions for SVG
+    const resizedBuffer = await sharp(file.buffer)
+      .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
+      .jpeg({ quality: compressionQuality })
+      .toBuffer();
+
+    const finalMeta = await sharp(resizedBuffer).metadata();
+    const finalW = finalMeta.width || 1920;
+    const finalH = finalMeta.height || 1080;
+    const fontSize = Math.floor(finalW * 0.20);
+
+    // 4. Burn Watermark
+    const svgWatermark = `
+      <svg width="${finalW}" height="${finalH}">
+        <style>
+          .title { fill: rgba(255, 255, 255, 0.4); font-size: ${fontSize}px; font-weight: 900; font-family: sans-serif; text-shadow: 0px 4px 15px rgba(0,0,0,0.6); }
+        </style>
+        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" class="title" transform="rotate(-20, ${finalW / 2}, ${finalH / 2})">surfshare</text>
+      </svg>
+    `;
+
+    await sharp(resizedBuffer)
+      .composite([{ input: Buffer.from(svgWatermark), gravity: "center" }])
+      .toFile(previewPath);
+
+    const imageUrl = `/uploads/photos/${previewFileName}`;
+    const originalUrl = originalPath;
 
     return {
       title: titlesArray[index] || null,
       imageUrl,
+      originalUrl,
       locationId: locationsArray[index],
       price: Number(pricesArray[index]),
       timeKey,
