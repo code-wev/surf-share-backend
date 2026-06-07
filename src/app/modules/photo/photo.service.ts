@@ -2,6 +2,8 @@ import { PhotoStatus, Prisma } from "@prisma/client";
 import prisma from "../../utils/prisma";
 import type { IPhotoBulkItem, IPhotoQuery } from "./photo.interface";
 import AppError from "../../errors/AppError";
+import * as fs from "fs";
+import * as path from "path";
 
 function getTimeOfDay(
   date: Date,
@@ -75,6 +77,7 @@ const bulkCreatePhotos = async (
     photographerId,
     title: item.title || null,
     imageUrl: item.imageUrl,
+    originalUrl: item.originalUrl || null,
     locationId: item.locationId,
     price: item.price,
     status: newStatus,
@@ -542,14 +545,40 @@ const getSecureDownloadPath = async (photoId: string, user: { id: string; role: 
     throw new AppError(404, "Photo not found.");
   }
 
+  let targetUrl = photo.originalUrl;
+  
+  // Robust Fallback: If originalUrl is missing but we have an imageUrl, reconstruct it.
+  if (!targetUrl && photo.imageUrl) {
+    // imageUrl format: /uploads/photos/123456789-preview.jpg
+    const match = photo.imageUrl.match(/\/uploads\/photos\/(.+)-preview\.jpg$/);
+    if (match && match[1]) {
+      const prefix = match[1];
+      const originalsDir = path.join(process.cwd(), "public", "originals");
+      
+      // Since we don't know the exact extension (.png, .jpg), we search the directory
+      if (fs.existsSync(originalsDir)) {
+        const files = fs.readdirSync(originalsDir);
+        const originalFile = files.find((f: string) => f.startsWith(`${prefix}-original.`));
+        if (originalFile) {
+          targetUrl = path.join(originalsDir, originalFile);
+        }
+      }
+    }
+    
+    // Ultimate fallback for very old photos (before the dual-image vault existed)
+    if (!targetUrl) {
+      targetUrl = path.join(process.cwd(), "public", photo.imageUrl);
+    }
+  }
+
   // 1. Is the user the photographer?
   if (photo.photographerId === user.id) {
-    return photo.originalUrl;
+    return targetUrl;
   }
 
   // 2. Is the user an Admin or Moderator?
   if (user.role === "ADMIN" || user.role === "MODERATOR") {
-    return photo.originalUrl;
+    return targetUrl;
   }
 
   // 3. Did the user purchase the photo?
@@ -564,7 +593,7 @@ const getSecureDownloadPath = async (photoId: string, user: { id: string; role: 
   });
 
   if (hasPurchased) {
-    return photo.originalUrl;
+    return targetUrl;
   }
 
   throw new AppError(403, "You must purchase this photo to download the high-resolution original.");
