@@ -55,6 +55,15 @@ const globalErrorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
         message
       }
     ];
+  } else if (isErrorWithCode(err) && err.code === 'P2003') {
+    statusCode = 400;
+    message = 'Cannot delete or modify this record because it is in use by another part of the system (e.g., already purchased).';
+    errorSources = [
+      {
+        path: '',
+        message
+      }
+    ];
   } else if (err instanceof Error) {
     message = err.message;
     errorSources = [
