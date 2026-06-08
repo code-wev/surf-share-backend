@@ -190,7 +190,13 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
   }
 
   if (locationId && locationId !== "all" && typeof locationId === "string") {
-    filter.locationId = locationId;
+    if (locationId.startsWith("state:")) {
+      filter.location = { state: locationId.replace("state:", "") };
+    } else if (locationId.startsWith("region:")) {
+      filter.location = { region: locationId.replace("region:", "") };
+    } else {
+      filter.locationId = locationId;
+    }
   }
 
   if (timeKey && timeKey !== "all" && typeof timeKey === "string") {
