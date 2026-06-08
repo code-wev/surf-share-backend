@@ -145,29 +145,10 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
     const isMassiveFile = fileSize > 10 * 1024 * 1024; // > 10MB
     const compressionQuality = isMassiveFile ? 40 : 70; 
 
-    // 3. Generate initial resized buffer to get exact dimensions for SVG
-    const resizedBuffer = await sharp(file.buffer)
+    // 3. Generate clean preview
+    await sharp(file.buffer)
       .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
       .jpeg({ quality: compressionQuality })
-      .toBuffer();
-
-    const finalMeta = await sharp(resizedBuffer).metadata();
-    const finalW = finalMeta.width || 1920;
-    const finalH = finalMeta.height || 1080;
-    const fontSize = Math.floor(finalW * 0.20);
-
-    // 4. Burn Watermark
-    const svgWatermark = `
-      <svg width="${finalW}" height="${finalH}">
-        <style>
-          .title { fill: rgba(255, 255, 255, 0.4); font-size: ${fontSize}px; font-weight: 900; font-family: sans-serif; text-shadow: 0px 4px 15px rgba(0,0,0,0.6); }
-        </style>
-        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" class="title" transform="rotate(-20, ${finalW / 2}, ${finalH / 2})">surfshare</text>
-      </svg>
-    `;
-
-    await sharp(resizedBuffer)
-      .composite([{ input: Buffer.from(svgWatermark), gravity: "center" }])
       .toFile(previewPath);
 
     const imageUrl = `/uploads/photos/${previewFileName}`;
