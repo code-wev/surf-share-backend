@@ -11,7 +11,15 @@ router.get("/map-data", LocationController.getMapData);
 
 router.get("/hierarchy", LocationController.getHierarchy);
 
+router.get("/featured", LocationController.getFeaturedLocations);
+
 router.get("/", LocationController.getAllLocations);
+
+router.patch(
+  "/:id/featured",
+  auth("ADMIN", "MODERATOR"),
+  LocationController.toggleFeatured,
+);
 
 router.post(
   "/",

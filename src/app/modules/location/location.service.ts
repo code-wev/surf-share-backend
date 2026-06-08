@@ -221,6 +221,38 @@ const getMapData = async () => {
   return mapData;
 };
 
+const getFeaturedLocations = async () => {
+  return prisma.location.findMany({
+    where: { isFeatured: true },
+    take: 4,
+    orderBy: { updatedAt: "desc" },
+  });
+};
+
+const toggleFeatured = async (id: string): Promise<Location> => {
+  const location = await prisma.location.findUnique({ where: { id } });
+
+  if (!location) {
+    throw new AppError(404, "Location not found.");
+  }
+
+  // If we are trying to feature it, make sure we don't exceed 4
+  if (!location.isFeatured) {
+    const featuredCount = await prisma.location.count({
+      where: { isFeatured: true },
+    });
+
+    if (featuredCount >= 4) {
+      throw new AppError(400, "You can only have 4 featured locations. Please un-feature one first.");
+    }
+  }
+
+  return prisma.location.update({
+    where: { id },
+    data: { isFeatured: !location.isFeatured },
+  });
+};
+
 export const LocationService = {
   getAllLocations,
   getHierarchy,
@@ -228,4 +260,6 @@ export const LocationService = {
   updateLocation,
   deleteLocation,
   getMapData,
+  getFeaturedLocations,
+  toggleFeatured,
 };

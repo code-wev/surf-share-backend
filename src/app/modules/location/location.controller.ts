@@ -94,6 +94,31 @@ const getMapData: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const getFeaturedLocations: RequestHandler = catchAsync(async (req, res) => {
+  const result = await LocationService.getFeaturedLocations();
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Featured locations retrieved successfully.",
+    data: result,
+  });
+});
+
+const toggleFeatured: RequestHandler = catchAsync(async (req, res) => {
+  const { id } = req.params;
+  const result = await LocationService.toggleFeatured(id as string);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: result.isFeatured
+      ? "Location is now featured."
+      : "Location is no longer featured.",
+    data: result,
+  });
+});
+
 export const LocationController = {
   getAllLocations,
   getHierarchy,
@@ -101,4 +126,6 @@ export const LocationController = {
   updateLocation,
   deleteLocation,
   getMapData,
+  getFeaturedLocations,
+  toggleFeatured,
 };

@@ -88,6 +88,7 @@ model Location {
   longitude       Float
   photosAvailable Int      @default(0)
   previewImage    String   // Cloudinary URL
+  isFeatured      Boolean  @default(false)
 
   photos          Photo[]
 
