@@ -12,7 +12,7 @@ const toggleFavorite: RequestHandler = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: result.status === "added" ? "Added to favorites" : "Removed from favorites",
+    message: result.status === "added" ? "Added to favourites" : "Removed from favourites",
     data: result,
   });
 });
@@ -24,7 +24,7 @@ const getMyFavorites: RequestHandler = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: "Favorites retrieved successfully",
+    message: "Favourites retrieved successfully",
     data: result,
   });
 });
@@ -36,7 +36,7 @@ const getMyFavoriteIds: RequestHandler = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: "Favorite IDs retrieved successfully",
+    message: "Favourite IDs retrieved successfully",
     data: result,
   });
 });
