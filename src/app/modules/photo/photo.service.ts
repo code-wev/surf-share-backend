@@ -196,6 +196,15 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
   if (timeKey && timeKey !== "all" && typeof timeKey === "string") {
     // Map new filter keys to both old and new DB values for compatibility
     const timeKeyMapping: Record<string, string[]> = {
+      "first_light": ["5_8", "FIRST_LIGHT"],
+      "FIRST_LIGHT": ["5_8", "FIRST_LIGHT"],
+      "morning": ["8_11", "MORNING"],
+      "MORNING": ["8_11", "MORNING"],
+      "lunch": ["11_14", "LUNCH"],
+      "LUNCH": ["11_14", "LUNCH"],
+      "afternoon": ["14_17", "AFTERNOON"],
+      "AFTERNOON": ["14_17", "AFTERNOON"],
+      // Legacy UI mapping
       "5_8": ["5_8", "FIRST_LIGHT"],
       "8_11": ["8_11", "MORNING"],
       "11_14": ["11_14", "LUNCH"],
