@@ -216,6 +216,7 @@ enum SubscriptionTier {
   BRONZE
   SILVER
   GOLD
+  GOLD_PLUS
 }
 
 enum ModeratorPermission {
