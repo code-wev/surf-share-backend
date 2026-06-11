@@ -46,6 +46,14 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
   const photographerId = req.user!.userId;
 
+  const userRecord = await prisma.user.findUnique({
+    where: { id: photographerId },
+  });
+  const subscriptionConfig = await prisma.subscriptionConfig.findUnique({
+    where: { tier: userRecord?.subscriptionTier || "BRONZE" },
+  });
+  const finalStatus = subscriptionConfig?.requiresApproval ? PhotoStatus.PENDING : PhotoStatus.APPROVED;
+
   const allowedPrices = [0, 2.99, 4.99, 9.99, 14.99, 19.99, 29.99, 39.99, 49.99];
 
   // PHASE 1: Instantly write PROCESSING records to DB
@@ -82,7 +90,7 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
   });
 
   // PHASE 2: Ghost Worker (Runs in background)
-  processImagesInBackground(files, initialRecords, capturedAtsArray, lastModifiedDatesArray).catch(console.error);
+  processImagesInBackground(files, initialRecords, capturedAtsArray, lastModifiedDatesArray, finalStatus).catch(console.error);
 });
 
 // Ghost Worker Function
@@ -90,7 +98,8 @@ async function processImagesInBackground(
   files: Express.Multer.File[],
   initialRecords: any[],
   capturedAtsArray: string[],
-  lastModifiedDatesArray: string[]
+  lastModifiedDatesArray: string[],
+  finalStatus: PhotoStatus
 ) {
   console.log(`\n--- Starting Background Processing for ${files.length} images ---`);
   
@@ -176,13 +185,13 @@ async function processImagesInBackground(
       // Clean up temp file
       fs.unlinkSync(file.path);
 
-      // Update DB from PROCESSING -> PENDING
+      // Update DB from PROCESSING -> Final Status
       await prisma.photo.update({
         where: { id: record.id },
         data: {
           imageUrl: `/uploads/photos/${previewFileName}`,
           originalUrl: originalPath,
-          status: PhotoStatus.PENDING,
+          status: finalStatus,
           timeKey,
           capturedAt,
           width,
