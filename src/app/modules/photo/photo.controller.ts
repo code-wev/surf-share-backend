@@ -10,6 +10,7 @@ import path from "path";
 import { PhotoStatus } from "@prisma/client";
 import { IPhotoQuery } from "./photo.interface";
 import { getTimeOfDay } from "../../utils/timeUtils";
+import prisma from "../../utils/prisma";
 
 const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
   const files = req.files as Express.Multer.File[];
@@ -47,43 +48,86 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
 
   const allowedPrices = [0, 2.99, 4.99, 9.99, 14.99, 19.99, 29.99, 39.99, 49.99];
 
-  const uploadPromises = files.map(async (file, index) => {
-    let capturedAt: Date | undefined;
-    let timeKey: string = "UNKNOWN";
-    let width: number | undefined;
-    let height: number | undefined;
-    let format: string | undefined;
-    const fileSize = file.size; // from multer memory storage
-    const priceValue = Number(pricesArray[index]);
+  // PHASE 1: Instantly write PROCESSING records to DB
+  const initialRecords = await Promise.all(
+    files.map(async (file, index) => {
+      const priceValue = Number(pricesArray[index]);
 
-    if (!allowedPrices.includes(priceValue)) {
-      throw new AppError(400, `Invalid price ${priceValue}. Allowed values are: ${allowedPrices.join(", ")}`);
-    }
-
-    console.log(`\n--- Processing File ${index + 1} ---`);
-    console.log(`File Name: ${file.originalname}, Size: ${fileSize} bytes`);
-
-    const explicitCapturedAt = capturedAtsArray[index];
-
-    if (explicitCapturedAt) {
-      const parsedCapturedAt = new Date(explicitCapturedAt);
-      if (!isNaN(parsedCapturedAt.getTime())) {
-        capturedAt = parsedCapturedAt;
-        timeKey = getTimeOfDay(capturedAt);
+      if (!allowedPrices.includes(priceValue)) {
+        throw new AppError(400, `Invalid price ${priceValue}. Allowed values are: ${allowedPrices.join(", ")}`);
       }
-    }
+
+      // We just create the skeleton record first
+      return prisma.photo.create({
+        data: {
+          photographerId,
+          locationId: locationsArray[index],
+          price: priceValue,
+          status: PhotoStatus.PROCESSING,
+          title: titlesArray[index] || null,
+          imageUrl: "", // Will be filled later
+          originalUrl: "", // Will be filled later
+          fileSize: file.size,
+        },
+      });
+    })
+  );
+
+  // Send instant response to client
+  sendResponse(res, {
+    statusCode: 201,
+    success: true,
+    message: `${files.length} photos uploaded. Processing in background...`,
+    data: initialRecords,
+  });
+
+  // PHASE 2: Ghost Worker (Runs in background)
+  processImagesInBackground(files, initialRecords, capturedAtsArray, lastModifiedDatesArray).catch(console.error);
+});
+
+// Ghost Worker Function
+async function processImagesInBackground(
+  files: Express.Multer.File[],
+  initialRecords: any[],
+  capturedAtsArray: string[],
+  lastModifiedDatesArray: string[]
+) {
+  console.log(`\n--- Starting Background Processing for ${files.length} images ---`);
+  
+  const originalsDir = path.join(process.cwd(), "public", "originals");
+  const previewsDir = path.join(process.cwd(), "public", "uploads", "photos");
+
+  if (!fs.existsSync(originalsDir)) fs.mkdirSync(originalsDir, { recursive: true });
+  if (!fs.existsSync(previewsDir)) fs.mkdirSync(previewsDir, { recursive: true });
+
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index];
+    const record = initialRecords[index];
 
     try {
-      // Sharp for dimensions only — no re-encoding
-      const sharpMeta = await sharp(file.buffer).metadata();
-      width = sharpMeta.width;
-      height = sharpMeta.height;
-      format = sharpMeta.format;
+      let capturedAt: Date | undefined;
+      let timeKey: string = "UNKNOWN";
+      let width: number | undefined;
+      let height: number | undefined;
+      let format: string | undefined;
 
-      if (!capturedAt) {
-        try {
-          // Parse EXIF from original buffer — exifr handles WebP/JPEG/HEIC natively
-          const parsedExif = await exifr.parse(file.buffer, {
+      const explicitCapturedAt = capturedAtsArray[index];
+      if (explicitCapturedAt) {
+        const parsedCapturedAt = new Date(explicitCapturedAt);
+        if (!isNaN(parsedCapturedAt.getTime())) {
+          capturedAt = parsedCapturedAt;
+          timeKey = getTimeOfDay(capturedAt);
+        }
+      }
+
+      try {
+        const sharpMeta = await sharp(file.path).metadata();
+        width = sharpMeta.width;
+        height = sharpMeta.height;
+        format = sharpMeta.format;
+
+        if (!capturedAt) {
+          const parsedExif = await exifr.parse(file.path, {
             pick: ["DateTimeOriginal", "CreateDate", "ModifyDate"],
           });
 
@@ -96,89 +140,68 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
           }
 
           if (capturedAt) timeKey = getTimeOfDay(capturedAt);
-        } catch (exifError) {
-          console.log("exifr parsing failed:", exifError);
+        }
+      } catch (e) {
+        console.error("Failed to extract metadata:", e);
+      }
+
+      if (!capturedAt && lastModifiedDatesArray[index]) {
+        const parsedDate = new Date(Number(lastModifiedDatesArray[index]));
+        if (!isNaN(parsedDate.getTime())) {
+          capturedAt = parsedDate;
+          timeKey = getTimeOfDay(capturedAt);
         }
       }
-    } catch (e) {
-      console.error("Failed to extract metadata:", e);
+
+      // Move raw file from temp to Vault
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      const ext = file.originalname.split(".").pop() || "jpg";
+      const originalFileName = `${uniqueSuffix}-original.${ext}`;
+      const previewFileName = `${uniqueSuffix}-preview.jpg`;
+
+      const originalPath = path.join(originalsDir, originalFileName);
+      const previewPath = path.join(previewsDir, previewFileName);
+
+      fs.copyFileSync(file.path, originalPath);
+
+      // Compression
+      const isMassiveFile = file.size > 10 * 1024 * 1024;
+      const compressionQuality = isMassiveFile ? 40 : 70;
+
+      await sharp(file.path)
+        .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
+        .jpeg({ quality: compressionQuality })
+        .toFile(previewPath);
+
+      // Clean up temp file
+      fs.unlinkSync(file.path);
+
+      // Update DB from PROCESSING -> PENDING
+      await prisma.photo.update({
+        where: { id: record.id },
+        data: {
+          imageUrl: `/uploads/photos/${previewFileName}`,
+          originalUrl: originalPath,
+          status: PhotoStatus.PENDING,
+          timeKey,
+          capturedAt,
+          width,
+          height,
+          format,
+        },
+      });
+
+      console.log(`Processed image ${index + 1}/${files.length} completely.`);
+    } catch (error) {
+      console.error(`Error processing image ${index + 1}:`, error);
+      // Mark as rejected or keep as processing so admins know it failed
+      await prisma.photo.update({
+        where: { id: record.id },
+        data: { status: PhotoStatus.REJECTED },
+      });
     }
-
-    // Fallback to lastModifiedDate from frontend if EXIF is missing
-    if (!capturedAt && lastModifiedDatesArray[index]) {
-      console.log("Falling back to frontend lastModifiedDate...");
-      const parsedDate = new Date(Number(lastModifiedDatesArray[index]));
-      if (!isNaN(parsedDate.getTime())) {
-        capturedAt = parsedDate;
-        timeKey = getTimeOfDay(capturedAt);
-        console.log(
-          `Fallback Date: ${capturedAt.toISOString()} -> TimeKey: ${timeKey}`,
-        );
-      }
-    } else if (!capturedAt) {
-      console.log("No EXIF and no fallback date available.");
-    }
-
-    console.log("Saving dual images to disk...");
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = file.originalname.split(".").pop() || "jpg";
-    const originalFileName = `${uniqueSuffix}-original.${ext}`;
-    const previewFileName = `${uniqueSuffix}-preview.jpg`;
-
-    const originalsDir = path.join(process.cwd(), "public", "originals");
-    const previewsDir = path.join(process.cwd(), "public", "uploads", "photos");
-
-    if (!fs.existsSync(originalsDir)) {
-      fs.mkdirSync(originalsDir, { recursive: true });
-    }
-    if (!fs.existsSync(previewsDir)) {
-      fs.mkdirSync(previewsDir, { recursive: true });
-    }
-
-    const originalPath = path.join(originalsDir, originalFileName);
-    const previewPath = path.join(previewsDir, previewFileName);
-
-    // 1. Vault: Save raw original file
-    fs.writeFileSync(originalPath, file.buffer);
-
-    // 2. Compression Logic
-    const isMassiveFile = fileSize > 10 * 1024 * 1024; // > 10MB
-    const compressionQuality = isMassiveFile ? 40 : 70; 
-
-    // 3. Generate clean preview
-    await sharp(file.buffer)
-      .resize(1920, 1920, { fit: "inside", withoutEnlargement: true })
-      .jpeg({ quality: compressionQuality })
-      .toFile(previewPath);
-
-    const imageUrl = `/uploads/photos/${previewFileName}`;
-    const originalUrl = originalPath;
-
-    return {
-      title: titlesArray[index] || null,
-      imageUrl,
-      originalUrl,
-      locationId: locationsArray[index],
-      price: Number(pricesArray[index]),
-      timeKey,
-      capturedAt,
-      width,
-      height,
-      format,
-      fileSize,
-    };
-  });
-
-  const items = await Promise.all(uploadPromises);
-  const result = await PhotoService.bulkCreatePhotos(photographerId, items);
-
-  sendResponse(res, {
-    statusCode: 201,
-    success: true,
-    message: `${result.count} photos uploaded successfully.`,
-    data: result,
-  });
-});
+  }
+}
 
 const getAllPhotos: RequestHandler = catchAsync(async (req, res) => {
   const result = await PhotoService.getAllPhotos(req.query);

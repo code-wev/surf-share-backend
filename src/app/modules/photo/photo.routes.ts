@@ -1,6 +1,6 @@
 import { Router } from "express";
 import auth from "../../middlewares/auth";
-import { uploadPhotoMemory } from "../../utils/upload";
+import { uploadPhotoDisk } from "../../utils/upload";
 import { PhotoController } from "./photo.controller";
 import validateRequest from "../../middlewares/validateRequest";
 import { PhotoValidation } from "./photo.validation";
@@ -10,7 +10,7 @@ const router = Router();
 router.post(
   "/upload",
   auth("PHOTOGRAPHER", "ADMIN"),
-  uploadPhotoMemory.array("photos", 50),
+  uploadPhotoDisk.array("photos", 50),
   PhotoController.uploadPhotos,
 );
 

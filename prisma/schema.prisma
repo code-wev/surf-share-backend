@@ -195,6 +195,7 @@ enum OrderStatus {
 }
 
 enum PhotoStatus {
+  PROCESSING
   PENDING
   APPROVED
   REJECTED
