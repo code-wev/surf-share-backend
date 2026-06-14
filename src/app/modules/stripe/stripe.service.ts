@@ -22,6 +22,9 @@ const generateConnectLink = async (userId: string) => {
         transfers: { requested: true },
       },
       business_type: "individual",
+      tos_acceptance: {
+        service_agreement: "recipient",
+      },
     });
 
     accountId = account.id;
