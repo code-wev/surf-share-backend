@@ -12,6 +12,7 @@ import { OrderRoutes } from "../modules/order/order.routes";
 import { SalesRoutes } from "../modules/sales/sales.routes";
 import { DashboardRoutes } from "../modules/dashboard/dashboard.routes";
 import { SubscriptionRoutes } from "../modules/subscription/subscription.routes";
+import { StripeRoutes } from "../modules/stripe/stripe.routes";
 
 const router = Router();
 
@@ -63,6 +64,10 @@ const moduleRoutes = [
   {
     path: "/subscriptions",
     route: SubscriptionRoutes,
+  },
+  {
+    path: "/stripe",
+    route: StripeRoutes,
   },
 ];
 
