@@ -49,7 +49,8 @@ export interface IUserResponse {
   countryName?: string | null;
   address?: string | null;
   phoneNumber?: string | null;
-  paypalEmail?: string | null;
+  stripeAccountId?: string | null;
+  stripeOnboardingComplete?: boolean | null;
   permissions?: string[] | null;
   socialAccounts?: ISocialAccount[];
   profileImageUrl?: string | null;

@@ -20,7 +20,9 @@ model User {
   profileImageUrl    String?
   
   // Specific to PHOTOGRAPHER
-  paypalEmail        String?
+  stripeAccountId    String?               @unique
+  stripeOnboardingComplete Boolean         @default(false)
+  
   // Contributor agreements (shortened names)
   acceptedApproval Boolean? @default(false)
   acceptedContributor Boolean? @default(false)

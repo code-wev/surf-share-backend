@@ -35,7 +35,8 @@ const sanitizeUser = (
   countryName: user.countryName,
   address: user.address,
   phoneNumber: user.phoneNumber,
-  paypalEmail: user.paypalEmail,
+  stripeAccountId: user.stripeAccountId,
+  stripeOnboardingComplete: user.stripeOnboardingComplete,
   subscriptionTier: (user as any).subscriptionTier,
   permissions: user.permissions
     ? (user.permissions as unknown as string[])

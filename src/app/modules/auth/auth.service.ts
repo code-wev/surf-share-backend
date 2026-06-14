@@ -43,7 +43,8 @@ type UserWithSocialAccount = {
   countryName?: string | null;
   address?: string | null;
   phoneNumber?: string | null;
-  paypalEmail?: string | null;
+  stripeAccountId?: string | null;
+  stripeOnboardingComplete?: boolean | null;
   permissions?: Prisma.JsonValue | null;
   socialAccount?: Prisma.JsonValue | null;
   profileImageUrl?: string | null;
@@ -62,7 +63,8 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
   countryName: user.countryName,
   address: user.address,
   phoneNumber: user.phoneNumber,
-  paypalEmail: user.paypalEmail,
+  stripeAccountId: user.stripeAccountId,
+  stripeOnboardingComplete: user.stripeOnboardingComplete,
   permissions: user.permissions
     ? (user.permissions as unknown as string[])
     : undefined,
