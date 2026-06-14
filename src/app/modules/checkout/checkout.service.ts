@@ -149,13 +149,50 @@ const handleWebhook = async (body: Buffer, signature: string) => {
 
     const orderId = session.client_reference_id;
 
-    if (orderId) {
+    if (orderId && session.payment_status === "paid") {
       // Mark as PAID
-      await prisma.order.update({
+      const updatedOrder = await prisma.order.update({
         where: { id: orderId },
         data: { status: "PAID" },
+        include: {
+          items: {
+            include: {
+              photo: {
+                include: { photographer: true },
+              },
+            },
+          },
+        },
       });
       console.log(`Order ${orderId} successfully marked as PAID from webhook.`);
+
+      // Execute Automated Split Payouts via Stripe Connect
+      for (const item of updatedOrder.items) {
+        const photographer = item.photo.photographer;
+        
+        // If photographer has completed Stripe onboarding and is owed money
+        if (
+          photographer.stripeAccountId &&
+          photographer.stripeOnboardingComplete &&
+          item.photographerEarnings &&
+          item.photographerEarnings > 0
+        ) {
+          try {
+            const transfer = await stripe.transfers.create({
+              amount: Math.round(item.photographerEarnings * 100), // convert to cents
+              currency: "usd", // must match charge currency
+              destination: photographer.stripeAccountId,
+              transfer_group: orderId, // links transfer to original payment
+            });
+            console.log(`Transferred $${item.photographerEarnings} to account ${photographer.stripeAccountId} for photo ${item.photoId}`);
+          } catch (transferError) {
+            console.error(`Failed to transfer funds to ${photographer.stripeAccountId} for photo ${item.photoId}:`, transferError);
+            // In a production app, we would log this to a failed_transfers table to retry later
+          }
+        } else {
+          console.log(`Skipped transfer for photo ${item.photoId}. Photographer not fully onboarded with Stripe or earnings zero.`);
+        }
+      }
     }
   }
 
@@ -253,6 +290,9 @@ const retryPayment = async (userId: string, orderId: string) => {
   const session = await stripe.checkout.sessions.create({
     line_items: lineItems,
     mode: "payment",
+    payment_intent_data: {
+      transfer_group: order.id,
+    },
     success_url: `${config.stripe.frontendUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${config.stripe.frontendUrl}/cart`,
     client_reference_id: order.id,
