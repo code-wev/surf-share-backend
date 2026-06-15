@@ -25,7 +25,7 @@ const config = {
   bcryptSaltRounds: parseNumber(process.env.BCRYPT_SALT_ROUNDS, 12),
   rateLimit: {
     windowMs: parseNumber(process.env.RATE_LIMIT_WINDOW_MS, 15 * 60 * 1000),
-    max: parseNumber(process.env.RATE_LIMIT_MAX, 100),
+    max: parseNumber(process.env.RATE_LIMIT_MAX, 1000), // Increased from 100 to 1000 to support modern SPA navigation
   },
   jwt: {
     accessSecret: jwtAccessSecret ?? "development-only-secret",
