@@ -36,7 +36,7 @@ const generateConnectLink = async (userId: string) => {
   }
 
   // Generate the onboarding link
-  const frontendUrl = "http://localhost:3000"; // Should be process.env.CLIENT_URL
+  const frontendUrl = config.stripe.frontendUrl;
   const accountLink = await stripe.accountLinks.create({
     account: accountId,
     refresh_url: `${frontendUrl}/profile?stripe_refresh=true`,
