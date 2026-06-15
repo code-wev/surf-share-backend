@@ -19,14 +19,20 @@ const createSession: RequestHandler = catchAsync(async (req, res) => {
 });
 
 const stripeWebhook = async (req: Request, res: Response) => {
+  console.log("\n[WEBHOOK] Entering stripeWebhook controller...");
   const signature = req.headers["stripe-signature"] as string;
   const body = req.body; // This must be the raw buffer
 
+  console.log(`[WEBHOOK] Signature present: ${!!signature}`);
+  console.log(`[WEBHOOK] Body type: ${typeof body}, isBuffer: ${Buffer.isBuffer(body)}`);
+
   try {
+    console.log("[WEBHOOK] Passing to CheckoutService...");
     const result = await CheckoutService.handleWebhook(body, signature);
+    console.log("[WEBHOOK] Service completed successfully.");
     res.json(result);
   } catch (error: any) {
-    console.error("Webhook signature verification failed.", error.message);
+    console.error("[WEBHOOK ERROR] Webhook signature verification failed.", error.message);
     res.status(400).send(`Webhook Error: ${error.message}`);
   }
 };

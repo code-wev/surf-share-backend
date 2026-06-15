@@ -45,7 +45,10 @@ app.use((req, res, next) => {
 app.use("/api/v1/checkout/webhook", express.raw({ type: "*/*" }));
 
 app.use((req, res, next) => {
-  if (req.originalUrl === "/api/v1/checkout/webhook") {
+  if (req.originalUrl.includes("webhook")) {
+    console.log(`[HTTP] Past express.raw. Proceeding...`);
+  }
+  if (req.originalUrl.includes("/api/v1/checkout/webhook")) {
     next();
   } else {
     express.json({ limit: "1000mb" })(req, res, next);

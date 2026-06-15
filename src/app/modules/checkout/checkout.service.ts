@@ -129,16 +129,20 @@ const handleWebhook = async (body: Buffer, signature: string) => {
   let event: any;
 
   try {
+    console.log("[WEBHOOK SERVICE] Constructing Stripe Event...");
     event = stripe.webhooks.constructEvent(
       body,
       signature,
       config.stripe.webhookSecret,
     );
+    console.log(`[WEBHOOK SERVICE] Event constructed successfully. Type: ${event.type}`);
   } catch (err: any) {
+    console.error("[WEBHOOK SERVICE] Error constructing event:", err.message);
     throw new AppError(400, `Webhook Error: ${err.message}`);
   }
 
   if (event.type === "checkout.session.completed") {
+    console.log("[WEBHOOK SERVICE] Processing checkout.session.completed...");
     interface MinimalSession {
       client_reference_id?: string;
       id?: string;
@@ -148,9 +152,11 @@ const handleWebhook = async (body: Buffer, signature: string) => {
     const session = event.data.object as unknown as MinimalSession;
 
     const orderId = session.client_reference_id;
+    console.log(`[WEBHOOK SERVICE] Order ID: ${orderId}, Payment Status: ${session.payment_status}`);
 
     if (orderId && session.payment_status === "paid") {
       // Mark as PAID
+      console.log("[WEBHOOK SERVICE] Fetching and updating order...");
       const updatedOrder = await prisma.order.update({
         where: { id: orderId },
         data: { status: "PAID" },
@@ -164,11 +170,12 @@ const handleWebhook = async (body: Buffer, signature: string) => {
           },
         },
       });
-      console.log(`Order ${orderId} successfully marked as PAID from webhook.`);
+      console.log(`[WEBHOOK SERVICE] Order ${orderId} successfully marked as PAID from webhook.`);
 
       // Execute Automated Split Payouts via Stripe Connect
       for (const item of updatedOrder.items) {
         const photographer = item.photo.photographer;
+        console.log(`[WEBHOOK SERVICE] Processing item photoId: ${item.photoId}. Photographer Stripe ID: ${photographer.stripeAccountId}, OnboardingComplete: ${photographer.stripeOnboardingComplete}, Earnings: ${item.photographerEarnings}`);
         
         // If photographer has completed Stripe onboarding and is owed money
         if (
@@ -178,21 +185,24 @@ const handleWebhook = async (body: Buffer, signature: string) => {
           item.photographerEarnings > 0
         ) {
           try {
+            console.log(`[WEBHOOK SERVICE] Attempting transfer of $${item.photographerEarnings} to ${photographer.stripeAccountId}...`);
             const transfer = await stripe.transfers.create({
               amount: Math.round(item.photographerEarnings * 100), // convert to cents
               currency: "usd", // must match charge currency
               destination: photographer.stripeAccountId,
               transfer_group: orderId, // links transfer to original payment
             });
-            console.log(`Transferred $${item.photographerEarnings} to account ${photographer.stripeAccountId} for photo ${item.photoId}`);
-          } catch (transferError) {
-            console.error(`Failed to transfer funds to ${photographer.stripeAccountId} for photo ${item.photoId}:`, transferError);
+            console.log(`[WEBHOOK SERVICE] Transferred $${item.photographerEarnings} to account ${photographer.stripeAccountId} for photo ${item.photoId}. Transfer ID: ${transfer.id}`);
+          } catch (transferError: any) {
+            console.error(`[WEBHOOK SERVICE ERROR] Failed to transfer funds to ${photographer.stripeAccountId} for photo ${item.photoId}:`, transferError.message);
             // In a production app, we would log this to a failed_transfers table to retry later
           }
         } else {
-          console.log(`Skipped transfer for photo ${item.photoId}. Photographer not fully onboarded with Stripe or earnings zero.`);
+          console.log(`[WEBHOOK SERVICE] Skipped transfer for photo ${item.photoId}. Conditions not met.`);
         }
       }
+    } else {
+      console.log("[WEBHOOK SERVICE] Order ID missing or payment not paid.");
     }
   }
 
