@@ -32,8 +32,17 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors(corsOptions));
 app.use(cookieParser());
 
+// Global logger to prove if requests arrive
+app.use((req, res, next) => {
+  if (req.originalUrl.includes("webhook")) {
+    console.log(`\n[HTTP] Received ${req.method} request to ${req.originalUrl}`);
+    console.log(`[HTTP] Headers:`, req.headers["content-type"]);
+  }
+  next();
+});
+
 // Stripe Webhook needs raw body, not parsed JSON
-app.use("/api/v1/checkout/webhook", express.raw({ type: "application/json" }));
+app.use("/api/v1/checkout/webhook", express.raw({ type: "*/*" }));
 
 app.use((req, res, next) => {
   if (req.originalUrl === "/api/v1/checkout/webhook") {
