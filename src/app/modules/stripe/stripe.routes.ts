@@ -16,4 +16,10 @@ router.get(
   StripeConnectController.checkOnboardingStatus,
 );
 
+router.get(
+  "/dashboard",
+  auth("PHOTOGRAPHER"),
+  StripeConnectController.generateDashboardLink,
+);
+
 export const StripeRoutes = router;

@@ -68,7 +68,20 @@ const checkOnboardingStatus = async (userId: string) => {
   return { isComplete };
 };
 
+const generateDashboardLink = async (userId: string) => {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  
+  if (!user || !user.stripeAccountId || !user.stripeOnboardingComplete) {
+    throw new AppError(400, "Stripe account is not fully connected yet.");
+  }
+
+  const loginLink = await stripe.accounts.createLoginLink(user.stripeAccountId);
+  
+  return loginLink.url;
+};
+
 export const StripeConnectService = {
   generateConnectLink,
   checkOnboardingStatus,
+  generateDashboardLink,
 };

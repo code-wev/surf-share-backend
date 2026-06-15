@@ -27,7 +27,20 @@ const checkOnboardingStatus: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const generateDashboardLink: RequestHandler = catchAsync(async (req, res) => {
+  const userId = req.user!.userId;
+  const url = await StripeConnectService.generateDashboardLink(userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Stripe Dashboard link generated successfully.",
+    data: { url },
+  });
+});
+
 export const StripeConnectController = {
   generateConnectLink,
   checkOnboardingStatus,
+  generateDashboardLink,
 };
