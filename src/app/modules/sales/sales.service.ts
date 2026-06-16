@@ -184,6 +184,50 @@ const getMySales = async (userId: string, locationId?: string) => {
   }
 };
 
+const getEarningsLedger = async (photographerId: string) => {
+  const orderItems = await prisma.orderItem.findMany({
+    where: {
+      photo: {
+        photographerId: photographerId,
+      },
+      order: {
+        status: "PAID",
+      },
+    },
+    include: {
+      photo: {
+        select: {
+          id: true,
+          title: true,
+          imageUrl: true,
+        },
+      },
+      order: {
+        select: {
+          id: true,
+          createdAt: true,
+        },
+      },
+    },
+    orderBy: {
+      order: {
+        createdAt: "desc",
+      },
+    },
+  });
+
+  return orderItems.map((item) => ({
+    id: item.id,
+    photoId: item.photo.id,
+    photoUrl: item.photo.imageUrl,
+    photoTitle: item.photo.title || "Untitled",
+    earnedAmount: item.photographerEarnings || 0,
+    payoutStatus: item.payoutStatus,
+    soldAt: item.order.createdAt.toISOString(),
+  }));
+};
+
 export const SalesService = {
   getMySales,
+  getEarningsLedger,
 };

@@ -22,6 +22,19 @@ const getMySales: RequestHandler = catchAsync(async (req, res) => {
   });
 });
 
+const getEarningsLedger: RequestHandler = catchAsync(async (req, res) => {
+  const userId = req.user!.userId;
+  const result = await SalesService.getEarningsLedger(userId);
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Earnings ledger retrieved successfully",
+    data: result,
+  });
+});
+
 export const SalesController = {
   getMySales,
+  getEarningsLedger,
 };

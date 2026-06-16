@@ -6,4 +6,10 @@ const router = Router();
 
 router.get("/my-sales", auth("PHOTOGRAPHER"), SalesController.getMySales);
 
+router.get(
+  "/earnings",
+  auth("PHOTOGRAPHER", "ADMIN"),
+  SalesController.getEarningsLedger,
+);
+
 export const SalesRoutes = router;
