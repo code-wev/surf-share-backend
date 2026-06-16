@@ -14,7 +14,7 @@ const updateUser = z.object({
       countryName: z.string().optional(),
       address: z.string().optional(),
       phoneNumber: z.string().optional(),
-      paypalEmail: z.string().email().optional(),
+      manualBankDetails: z.string().optional(),
       permissions: z.array(ModeratorPermissionEnum).optional(),
       promotionEmail: z.boolean().optional(),
       socialAccounts: z
