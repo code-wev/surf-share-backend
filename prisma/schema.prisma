@@ -178,6 +178,7 @@ model OrderItem {
   price                Float
   photographerEarnings Float?
   platformFee          Float?
+  payoutStatus         PayoutStatus @default(PENDING)
   
   orderId   String
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -194,6 +195,12 @@ enum OrderStatus {
   PENDING
   PAID
   FAILED
+}
+
+enum PayoutStatus {
+  PENDING
+  AUTOMATED_SUCCESS
+  MANUAL_SUCCESS
 }
 
 enum PhotoStatus {

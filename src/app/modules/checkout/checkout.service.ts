@@ -193,6 +193,12 @@ const handleWebhook = async (body: Buffer, signature: string) => {
               transfer_group: orderId, // links transfer to original payment
             });
             console.log(`[WEBHOOK SERVICE] Transferred $${item.photographerEarnings} to account ${photographer.stripeAccountId} for photo ${item.photoId}. Transfer ID: ${transfer.id}`);
+
+            // NEW: Record the successful payout in our database ledger
+            await prisma.orderItem.update({
+              where: { id: item.id },
+              data: { payoutStatus: "AUTOMATED_SUCCESS" },
+            });
           } catch (transferError: any) {
             console.error(`[WEBHOOK SERVICE ERROR] Failed to transfer funds to ${photographer.stripeAccountId} for photo ${item.photoId}:`, transferError.message);
             // In a production app, we would log this to a failed_transfers table to retry later
