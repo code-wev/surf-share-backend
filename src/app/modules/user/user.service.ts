@@ -13,7 +13,7 @@ type IUserUpdatePayload = {
   countryName?: string;
   address?: string;
   phoneNumber?: string;
-  paypalEmail?: string;
+  manualBankDetails?: string;
   profileImageUrl?: string;
   permissions?: User["permissions"];
   socialAccounts?: ISocialAccount[];
@@ -37,6 +37,7 @@ const sanitizeUser = (
   phoneNumber: user.phoneNumber,
   stripeAccountId: user.stripeAccountId,
   stripeOnboardingComplete: user.stripeOnboardingComplete,
+  manualBankDetails: user.manualBankDetails,
   subscriptionTier: (user as any).subscriptionTier,
   permissions: user.permissions
     ? (user.permissions as unknown as string[])

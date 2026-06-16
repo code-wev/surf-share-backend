@@ -51,6 +51,7 @@ export interface IUserResponse {
   phoneNumber?: string | null;
   stripeAccountId?: string | null;
   stripeOnboardingComplete?: boolean | null;
+  manualBankDetails?: string | null;
   permissions?: string[] | null;
   socialAccounts?: ISocialAccount[];
   profileImageUrl?: string | null;
