@@ -222,11 +222,27 @@ const getMapData = async () => {
 };
 
 const getFeaturedLocations = async () => {
-  return prisma.location.findMany({
+  const locations = await prisma.location.findMany({
     where: { isFeatured: true },
     take: 4,
     orderBy: { updatedAt: "desc" },
+    include: {
+      _count: {
+        select: {
+          photos: {
+            where: {
+              status: "APPROVED",
+            },
+          },
+        },
+      },
+    },
   });
+
+  return locations.map(({ _count, ...location }) => ({
+    ...location,
+    photosAvailable: _count.photos,
+  }));
 };
 
 const toggleFeatured = async (id: string): Promise<Location> => {
