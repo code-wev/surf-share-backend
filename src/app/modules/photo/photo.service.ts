@@ -233,7 +233,7 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
         now.getMonth(),
         now.getDate(),
       );
-      filter.createdAt = { gte: startOfDay };
+      filter.capturedAt = { gte: startOfDay };
     } else if (tab === "yesterday") {
       const startOfYesterday = new Date(
         now.getFullYear(),
@@ -245,13 +245,13 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
         now.getMonth(),
         now.getDate(),
       );
-      filter.createdAt = { gte: startOfYesterday, lt: endOfYesterday };
+      filter.capturedAt = { gte: startOfYesterday, lt: endOfYesterday };
     } else if (tab === "last7days") {
       const last7Days = new Date(now.setDate(now.getDate() - 7));
-      filter.createdAt = { gte: last7Days };
+      filter.capturedAt = { gte: last7Days };
     } else if (tab === "last14days") {
       const last14Days = new Date(now.setDate(now.getDate() - 14));
-      filter.createdAt = { gte: last14Days };
+      filter.capturedAt = { gte: last14Days };
     }
   }
 
