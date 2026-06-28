@@ -109,6 +109,8 @@ model Photo {
   originalUrl    String?
   price          Float
   status         PhotoStatus @default(PENDING)
+  isDeleted      Boolean     @default(false)
+
   
   // EXIF and Time of Day
   timeKey        String      @default("any")

@@ -127,6 +127,7 @@ const getMyPhotos = async (photographerId: string, query: IPhotoQuery) => {
 
   const where: Prisma.PhotoWhereInput = {
     photographerId,
+    isDeleted: false,
   };
 
   if (status) {
@@ -181,7 +182,9 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
     limit = 16,
   } = query;
 
-  const filter: Prisma.PhotoWhereInput = {};
+  const filter: Prisma.PhotoWhereInput = {
+    isDeleted: false,
+  };
 
   if (status && typeof status === "string") {
     filter.status = status as PhotoStatus;
@@ -303,7 +306,9 @@ const getPhotosForModerator = async (query: IPhotoQuery) => {
   const limitNumber = Number(limit);
   const skip = (pageNumber - 1) * limitNumber;
 
-  const where: Prisma.PhotoWhereInput = {};
+  const where: Prisma.PhotoWhereInput = {
+    isDeleted: false,
+  };
 
   if (status) {
     where.status = status;
@@ -368,6 +373,7 @@ const getPhotosByPhotographerId = async (
 
   const where: Prisma.PhotoWhereInput = {
     photographerId,
+    isDeleted: false,
   };
 
   if (status) {
@@ -447,6 +453,9 @@ const getPhotoById = async (photoId: string) => {
       },
     },
   });
+  
+  if (result && result.isDeleted) return null;
+  
   return result;
 };
 
@@ -524,6 +533,9 @@ const updatePhoto = async (
 const deletePhoto = async (photoId: string, user: { id: string; role: string }) => {
   const photo = await prisma.photo.findUnique({
     where: { id: photoId },
+    include: {
+      orderItems: true
+    }
   });
 
   if (!photo) throw new AppError(404, "Photo not found.");
@@ -535,6 +547,30 @@ const deletePhoto = async (photoId: string, user: { id: string; role: string }) 
     throw new AppError(403, "You do not have permission to delete this photo.");
   }
 
+  const hasBeenPurchased = photo.orderItems.length > 0;
+
+  if (hasBeenPurchased) {
+    if (!isAuthorized) {
+      // It's just a photographer trying to delete a purchased photo
+      throw new AppError(403, "PHOTO_ALREADY_PURCHASED");
+    }
+    
+    // Moderator or Admin deleting a purchased photo -> Soft Delete
+    const result = await prisma.$transaction(async (tx) => {
+      await tx.location.update({
+        where: { id: photo.locationId },
+        data: { photosAvailable: { decrement: 1 } },
+      });
+
+      return await tx.photo.update({
+        where: { id: photoId },
+        data: { isDeleted: true }
+      });
+    });
+    return result;
+  }
+
+  // Not purchased -> Hard Delete
   const result = await prisma.$transaction(async (tx) => {
     // Decrement location count
     await tx.location.update({
