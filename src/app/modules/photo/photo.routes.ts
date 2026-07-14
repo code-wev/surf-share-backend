@@ -19,7 +19,7 @@ router.get("/my-photos", auth("PHOTOGRAPHER"), PhotoController.getMyPhotos);
 router.get("/moderator", auth("MODERATOR", "ADMIN"), PhotoController.getPhotosForModerator);
 
 router.patch(
-  "/status/:photoId",
+  "/:photoId/status",
   auth("MODERATOR", "ADMIN"),
   validateRequest(PhotoValidation.updatePhotoStatus),
   PhotoController.updatePhotoStatus,
