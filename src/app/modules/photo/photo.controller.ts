@@ -125,7 +125,7 @@ async function processImagesInBackground(
         const parsedCapturedAt = new Date(explicitCapturedAt);
         if (!isNaN(parsedCapturedAt.getTime())) {
           capturedAt = parsedCapturedAt;
-          timeKey = getTimeOfDay(capturedAt);
+          timeKey = getTimeOfDay(explicitCapturedAt);
         }
       }
 
@@ -142,13 +142,17 @@ async function processImagesInBackground(
 
           if (parsedExif?.DateTimeOriginal) {
             capturedAt = new Date(parsedExif.DateTimeOriginal);
+            timeKey = getTimeOfDay(parsedExif.DateTimeOriginal.toString());
           } else if (parsedExif?.CreateDate) {
             capturedAt = new Date(parsedExif.CreateDate);
+            timeKey = getTimeOfDay(parsedExif.CreateDate.toString());
           } else if (parsedExif?.ModifyDate) {
             capturedAt = new Date(parsedExif.ModifyDate);
+            timeKey = getTimeOfDay(parsedExif.ModifyDate.toString());
           }
 
-          if (capturedAt) timeKey = getTimeOfDay(capturedAt);
+          // If timeKey was still UNKNOWN, fallback to Date object (though string is preferred)
+          if (capturedAt && timeKey === "UNKNOWN") timeKey = getTimeOfDay(capturedAt);
         }
       } catch (e) {
         console.error("Failed to extract metadata:", e);
@@ -158,7 +162,7 @@ async function processImagesInBackground(
         const parsedDate = new Date(Number(lastModifiedDatesArray[index]));
         if (!isNaN(parsedDate.getTime())) {
           capturedAt = parsedDate;
-          timeKey = getTimeOfDay(capturedAt);
+          timeKey = getTimeOfDay(lastModifiedDatesArray[index]);
         }
       }
 
