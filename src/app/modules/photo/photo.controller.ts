@@ -49,10 +49,56 @@ const uploadPhotos: RequestHandler = catchAsync(async (req, res) => {
   const userRecord = await prisma.user.findUnique({
     where: { id: photographerId },
   });
+  if (!userRecord) throw new AppError(404, "User not found");
+
   const subscriptionConfig = await prisma.subscriptionConfig.findUnique({
-    where: { tier: userRecord?.subscriptionTier || "BRONZE" },
+    where: { tier: userRecord.subscriptionTier },
   });
-  const finalStatus = subscriptionConfig?.requiresApproval ? PhotoStatus.PENDING : PhotoStatus.APPROVED;
+  if (!subscriptionConfig) throw new AppError(500, "Subscription config not found");
+
+  // Rule 1: Max Price check
+  if (subscriptionConfig.maxPrice !== null) {
+    const invalidPriceIndex = pricesArray.findIndex((p) => Number(p) > subscriptionConfig.maxPrice!);
+    if (invalidPriceIndex !== -1) {
+      throw new AppError(
+        400,
+        `Photo price of $${pricesArray[invalidPriceIndex]} exceeds your tier limit of $${subscriptionConfig.maxPrice}.`
+      );
+    }
+  }
+
+  // Rule 2: Daily Upload Limit
+  if (subscriptionConfig.dailyUploadLimit !== null) {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const uploadedToday = await prisma.photo.count({
+      where: {
+        photographerId,
+        createdAt: { gte: startOfDay },
+      },
+    });
+
+    if (uploadedToday + files.length > subscriptionConfig.dailyUploadLimit) {
+      throw new AppError(
+        400,
+        `Daily upload limit of ${subscriptionConfig.dailyUploadLimit} exceeded. You have already uploaded ${uploadedToday} photos today.`
+      );
+    }
+  }
+
+  // Rule 3: Auto Approval (Trust Rule)
+  let finalStatus: PhotoStatus = PhotoStatus.PENDING;
+  if (!subscriptionConfig.requiresApproval) {
+    finalStatus = PhotoStatus.APPROVED;
+  } else {
+    const approvedCount = await prisma.photo.count({
+      where: {
+        photographerId,
+        status: PhotoStatus.APPROVED,
+      },
+    });
+    finalStatus = approvedCount >= 10 ? PhotoStatus.APPROVED : PhotoStatus.PENDING;
+  }
 
   const allowedPrices = [0, 2.99, 4.99, 9.99, 14.99, 19.99, 29.99, 39.99, 49.99];
 
@@ -203,6 +249,14 @@ async function processImagesInBackground(
           format,
         },
       });
+
+      // Increment location's photosAvailable if approved
+      if (finalStatus === PhotoStatus.APPROVED) {
+        await prisma.location.update({
+          where: { id: record.locationId },
+          data: { photosAvailable: { increment: 1 } },
+        });
+      }
 
       console.log(`Processed image ${index + 1}/${files.length} completely.`);
     } catch (error) {
