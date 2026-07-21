@@ -63,8 +63,8 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
   countryName: user.countryName,
   address: user.address,
   phoneNumber: user.phoneNumber,
-  stripeAccountId: user.stripeAccountId,
-  stripeOnboardingComplete: user.stripeOnboardingComplete,
+  paypalEmail: (user as any).paypalEmail,
+  paypalConnected: (user as any).paypalConnected,
   permissions: user.permissions
     ? (user.permissions as unknown as string[])
     : undefined,

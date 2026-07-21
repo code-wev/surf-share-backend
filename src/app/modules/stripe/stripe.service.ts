@@ -11,7 +11,7 @@ const generateConnectLink = async (userId: string) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new AppError(404, "User not found.");
 
-  let accountId = user.stripeAccountId;
+  let accountId = user.paypalEmail;
 
   if (!accountId) {
     const account = await stripe.accounts.create({
@@ -31,7 +31,7 @@ const generateConnectLink = async (userId: string) => {
 
     await prisma.user.update({
       where: { id: userId },
-      data: { stripeAccountId: accountId },
+      data: { paypalEmail: accountId },
     });
   }
 
@@ -53,19 +53,19 @@ const generateConnectLink = async (userId: string) => {
 
 const checkOnboardingStatus = async (userId: string) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || !user.stripeAccountId) {
+  if (!user || !user.paypalEmail) {
     return { isComplete: false };
   }
 
-  const account = await stripe.accounts.retrieve(user.stripeAccountId);
+  const account = await stripe.accounts.retrieve(user.paypalEmail);
 
   // Checks if they submitted details and if transfers are active
   const isComplete = account.details_submitted && account.capabilities?.transfers === "active";
 
-  if (isComplete !== user.stripeOnboardingComplete) {
+  if (isComplete !== user.paypalConnected) {
     await prisma.user.update({
       where: { id: userId },
-      data: { stripeOnboardingComplete: isComplete },
+      data: { paypalConnected: isComplete },
     });
   }
 
@@ -75,11 +75,11 @@ const checkOnboardingStatus = async (userId: string) => {
 const generateDashboardLink = async (userId: string) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   
-  if (!user || !user.stripeAccountId || !user.stripeOnboardingComplete) {
+  if (!user || !user.paypalEmail || !user.paypalConnected) {
     throw new AppError(400, "Stripe account is not fully connected yet.");
   }
 
-  const loginLink = await stripe.accounts.createLoginLink(user.stripeAccountId);
+  const loginLink = await stripe.accounts.createLoginLink(user.paypalEmail);
   
   return loginLink.url;
 };

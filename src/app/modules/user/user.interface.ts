@@ -49,8 +49,8 @@ export interface IUserResponse {
   countryName?: string | null;
   address?: string | null;
   phoneNumber?: string | null;
-  stripeAccountId?: string | null;
-  stripeOnboardingComplete?: boolean | null;
+  paypalEmail?: string | null;
+  paypalConnected?: boolean | null;
   manualBankDetails?: string | null;
   permissions?: string[] | null;
   socialAccounts?: ISocialAccount[];

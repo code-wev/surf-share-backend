@@ -20,8 +20,8 @@ model User {
   profileImageUrl    String?
   
   // Specific to PHOTOGRAPHER
-  stripeAccountId    String?               @unique
-  stripeOnboardingComplete Boolean         @default(false)
+  paypalEmail        String?               @unique
+  paypalConnected    Boolean               @default(false)
   manualBankDetails  String?               @db.Text
   
   // Contributor agreements (shortened names)
@@ -159,7 +159,7 @@ model Favorite {
 
 model Order {
   id              String      @id @default(uuid())
-  stripeSessionId String?     @unique
+  paypalOrderId   String?     @unique
   totalAmount     Float
   status          OrderStatus @default(PENDING)
   

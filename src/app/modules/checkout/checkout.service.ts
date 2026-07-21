@@ -119,7 +119,7 @@ const createSession = async (userId: string, photoIds: string[]) => {
   // 4. Update the order with the stripeSessionId
   await prisma.order.update({
     where: { id: order.id },
-    data: { stripeSessionId: session.id },
+    data: { paypalOrderId: session.id },
   });
 
   return { url: session.url, sessionId: session.id };
@@ -175,24 +175,24 @@ const handleWebhook = async (body: Buffer, signature: string) => {
       // Execute Automated Split Payouts via Stripe Connect
       for (const item of updatedOrder.items) {
         const photographer = item.photo.photographer;
-        console.log(`[WEBHOOK SERVICE] Processing item photoId: ${item.photoId}. Photographer Stripe ID: ${photographer.stripeAccountId}, OnboardingComplete: ${photographer.stripeOnboardingComplete}, Earnings: ${item.photographerEarnings}`);
+        console.log(`[WEBHOOK SERVICE] Processing item photoId: ${item.photoId}. Photographer PayPal Email: ${photographer.paypalEmail}, Connected: ${photographer.paypalConnected}, Earnings: ${item.photographerEarnings}`);
         
         // If photographer has completed Stripe onboarding and is owed money
         if (
-          photographer.stripeAccountId &&
-          photographer.stripeOnboardingComplete &&
+          photographer.paypalEmail &&
+          photographer.paypalConnected &&
           item.photographerEarnings &&
           item.photographerEarnings > 0
         ) {
           try {
-            console.log(`[WEBHOOK SERVICE] Attempting transfer of $${item.photographerEarnings} to ${photographer.stripeAccountId}...`);
+            console.log(`[WEBHOOK SERVICE] Attempting transfer of $${item.photographerEarnings} to ${photographer.paypalEmail}...`);
             const transfer = await stripe.transfers.create({
               amount: Math.round(item.photographerEarnings * 100), // convert to cents
               currency: "usd", // must match charge currency
-              destination: photographer.stripeAccountId,
+              destination: photographer.paypalEmail,
               transfer_group: orderId, // links transfer to original payment
             });
-            console.log(`[WEBHOOK SERVICE] Transferred $${item.photographerEarnings} to account ${photographer.stripeAccountId} for photo ${item.photoId}. Transfer ID: ${transfer.id}`);
+            console.log(`[WEBHOOK SERVICE] Transferred $${item.photographerEarnings} to account ${photographer.paypalEmail} for photo ${item.photoId}. Transfer ID: ${transfer.id}`);
 
             // NEW: Record the successful payout in our database ledger
             await prisma.orderItem.update({
@@ -200,7 +200,7 @@ const handleWebhook = async (body: Buffer, signature: string) => {
               data: { payoutStatus: "AUTOMATED_SUCCESS" },
             });
           } catch (transferError: any) {
-            console.error(`[WEBHOOK SERVICE ERROR] Failed to transfer funds to ${photographer.stripeAccountId} for photo ${item.photoId}:`, transferError.message);
+            console.error(`[WEBHOOK SERVICE ERROR] Failed to transfer funds to ${photographer.paypalEmail} for photo ${item.photoId}:`, transferError.message);
             // In a production app, we would log this to a failed_transfers table to retry later
           }
         } else {
@@ -318,7 +318,7 @@ const retryPayment = async (userId: string, orderId: string) => {
   // Update order with new stripeSessionId
   await prisma.order.update({
     where: { id: order.id },
-    data: { stripeSessionId: session.id },
+    data: { paypalOrderId: session.id },
   });
 
   return { url: session.url, sessionId: session.id };
