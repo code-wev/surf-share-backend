@@ -66,9 +66,6 @@ const moduleRoutes = [
     route: SubscriptionRoutes,
   },
   {
-    path: "/stripe",
-  },
-  {
     path: "/payouts",
     route: PayoutRoutes,
   },

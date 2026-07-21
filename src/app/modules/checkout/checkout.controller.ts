@@ -13,45 +13,40 @@ const createSession: RequestHandler = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: "Checkout session created successfully",
+    message: "PayPal Order created successfully",
     data: result,
   });
 });
 
-const stripeWebhook = async (req: Request, res: Response) => {
-  console.log("\n[WEBHOOK] Entering stripeWebhook controller...");
-  const signature = req.headers["stripe-signature"] as string;
-  const body = req.body; // This must be the raw buffer
-
-  console.log(`[WEBHOOK] Signature present: ${!!signature}`);
-  console.log(`[WEBHOOK] Body type: ${typeof body}, isBuffer: ${Buffer.isBuffer(body)}`);
-
-  try {
-    console.log("[WEBHOOK] Passing to CheckoutService...");
-    const result = await CheckoutService.handleWebhook(body, signature);
-    console.log("[WEBHOOK] Service completed successfully.");
-    res.json(result);
-  } catch (error: any) {
-    console.error("[WEBHOOK ERROR] Webhook signature verification failed.", error.message);
-    res.status(400).send(`Webhook Error: ${error.message}`);
-  }
-};
-
-const verifySession: RequestHandler = catchAsync(async (req, res) => {
-  const { sessionId } = req.query;
-  if (!sessionId || typeof sessionId !== "string") {
-    throw new AppError(400, "Session ID is required");
+const captureOrder: RequestHandler = catchAsync(async (req, res) => {
+  const { orderId } = req.body;
+  if (!orderId) {
+    throw new AppError(400, "PayPal Order ID is required");
   }
 
-  const result = await CheckoutService.verifySession(sessionId);
+  const result = await CheckoutService.captureOrder(orderId);
 
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: "Session verified",
+    message: "Order captured successfully",
     data: result,
   });
 });
+
+const paypalWebhook = async (req: Request, res: Response) => {
+  console.log("\n[WEBHOOK] Entering paypalWebhook controller...");
+  const signature = req.headers["paypal-transmission-sig"] as string;
+  const body = req.body; // Buffer
+
+  try {
+    const result = await CheckoutService.handleWebhook(body, signature);
+    res.json(result);
+  } catch (error: any) {
+    console.error("[WEBHOOK ERROR] Webhook failed.", error.message);
+    res.status(400).send(`Webhook Error: ${error.message}`);
+  }
+};
 
 const getPurchasedPhotoIds: RequestHandler = catchAsync(async (req, res) => {
   const userId = req.user!.userId;
@@ -92,16 +87,16 @@ const retryPayment: RequestHandler = catchAsync(async (req, res) => {
   sendResponse(res, {
     statusCode: 200,
     success: true,
-    message: "Checkout session created successfully",
+    message: "PayPal Order re-created successfully",
     data: result,
   });
 });
 
 export const CheckoutController = {
   createSession,
+  captureOrder,
   retryPayment,
-  stripeWebhook,
-  verifySession,
+  paypalWebhook,
   getPurchasedPhotoIds,
   getPurchasedPhotos,
 };

@@ -14,6 +14,12 @@ router.post(
 );
 
 router.post(
+  "/capture-order",
+  auth("SURFER", "PHOTOGRAPHER", "MODERATOR", "ADMIN"),
+  CheckoutController.captureOrder,
+);
+
+router.post(
   "/retry-payment",
   auth("SURFER", "PHOTOGRAPHER", "MODERATOR", "ADMIN"),
   CheckoutController.retryPayment,
@@ -22,13 +28,7 @@ router.post(
 // The webhook route is mapped in app.ts to use express.raw()
 router.post(
   "/webhook",
-  CheckoutController.stripeWebhook,
-);
-
-router.get(
-  "/verify-session",
-  auth("SURFER", "PHOTOGRAPHER", "MODERATOR", "ADMIN"),
-  CheckoutController.verifySession,
+  CheckoutController.paypalWebhook,
 );
 
 router.get(
