@@ -15,6 +15,8 @@ const updateUser = z.object({
       address: z.string().optional(),
       phoneNumber: z.string().optional(),
       manualBankDetails: z.string().optional(),
+      paypalEmail: z.string().email("Invalid email format").optional(),
+      paypalConnected: z.boolean().optional(),
       permissions: z.array(ModeratorPermissionEnum).optional(),
       promotionEmail: z.boolean().optional(),
       socialAccounts: z

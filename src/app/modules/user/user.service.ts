@@ -14,6 +14,8 @@ type IUserUpdatePayload = {
   address?: string;
   phoneNumber?: string;
   manualBankDetails?: string;
+  paypalEmail?: string;
+  paypalConnected?: boolean;
   profileImageUrl?: string;
   permissions?: User["permissions"];
   socialAccounts?: ISocialAccount[];
