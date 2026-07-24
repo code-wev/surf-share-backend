@@ -161,10 +161,71 @@ const captureOrder = async (paypalOrderId: string) => {
   }
 };
 
-const handleWebhook = async (body: Buffer, signature: string) => {
-  // TODO: Implement actual PayPal webhook verification if needed
-  // For now, since we actively capture the order on the server, the webhook is mostly a fallback.
-  console.log("[WEBHOOK SERVICE] Received PayPal webhook notification.");
+const handleWebhook = async (rawBody: Buffer, headers: any) => {
+  let bodyJSON: any;
+  try {
+    bodyJSON = JSON.parse(rawBody.toString("utf8"));
+  } catch (err) {
+    throw new AppError(400, "Invalid JSON in webhook body");
+  }
+
+  // 1. Verify webhook signature
+  const isValid = await PaypalService.verifyWebhookSignature(headers, bodyJSON);
+  if (!isValid) {
+    throw new AppError(400, "Invalid Webhook Signature");
+  }
+
+  console.log(`[WEBHOOK SERVICE] Verified event: ${bodyJSON.event_type}`);
+
+  // 2. Process webhook event
+  switch (bodyJSON.event_type) {
+    case "PAYMENT.CAPTURE.COMPLETED":
+      // Usually handled synchronously via frontend, but good as a fallback
+      // Custom logic here if needed
+      break;
+
+    case "PAYMENT.PAYOUTSBATCH.SUCCESS":
+    case "PAYMENT.PAYOUTS-ITEM.SUCCEEDED": {
+      // Find the order item by sender_item_id
+      const senderItemId = bodyJSON.resource?.payout_item?.sender_item_id || bodyJSON.resource?.batch_header?.sender_batch_header?.sender_batch_id;
+      if (senderItemId && senderItemId.startsWith("payout_")) {
+        const orderItemId = senderItemId.replace("payout_", "");
+        try {
+          await prisma.orderItem.update({
+            where: { id: orderItemId },
+            data: { payoutStatus: "AUTOMATED_SUCCESS" },
+          });
+          console.log(`[WEBHOOK SERVICE] Updated OrderItem ${orderItemId} payoutStatus to AUTOMATED_SUCCESS`);
+        } catch (err) {
+          console.error(`[WEBHOOK SERVICE] Failed to update OrderItem ${orderItemId}:`, err);
+        }
+      }
+      break;
+    }
+
+    case "PAYMENT.PAYOUTSBATCH.DENIED":
+    case "PAYMENT.PAYOUTS-ITEM.FAILED":
+    case "PAYMENT.PAYOUTS-ITEM.DENIED": {
+      const senderItemId = bodyJSON.resource?.payout_item?.sender_item_id || bodyJSON.resource?.batch_header?.sender_batch_header?.sender_batch_id;
+      if (senderItemId && senderItemId.startsWith("payout_")) {
+        const orderItemId = senderItemId.replace("payout_", "");
+        try {
+          await prisma.orderItem.update({
+            where: { id: orderItemId },
+            data: { payoutStatus: "PENDING" },
+          });
+          console.log(`[WEBHOOK SERVICE] Updated OrderItem ${orderItemId} payoutStatus back to PENDING after failed automated payout`);
+        } catch (err) {
+          console.error(`[WEBHOOK SERVICE] Failed to update OrderItem ${orderItemId}:`, err);
+        }
+      }
+      break;
+    }
+
+    default:
+      console.log(`[WEBHOOK SERVICE] Unhandled event type: ${bodyJSON.event_type}`);
+  }
+
   return { received: true };
 };
 

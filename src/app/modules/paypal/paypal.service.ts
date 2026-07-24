@@ -152,9 +152,42 @@ const executePayout = async (
   }
 };
 
+/**
+ * Verify PayPal Webhook Signature.
+ */
+const verifyWebhookSignature = async (headers: any, body: any) => {
+  const accessToken = await generateAccessToken();
+  const url = `${getBaseUrl()}/v1/notifications/verify-webhook-signature`;
+
+  const payload = {
+    auth_algo: headers["paypal-auth-algo"],
+    cert_url: headers["paypal-cert-url"],
+    transmission_id: headers["paypal-transmission-id"],
+    transmission_sig: headers["paypal-transmission-sig"],
+    transmission_time: headers["paypal-transmission-time"],
+    webhook_id: config.paypal.webhookId,
+    webhook_event: body,
+  };
+
+  try {
+    const response = await axios.post(url, payload, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    return response.data.verification_status === "SUCCESS";
+  } catch (error: any) {
+    console.error("Failed to verify webhook signature:", error?.response?.data || error.message);
+    return false;
+  }
+};
+
 export const PaypalService = {
   generateAccessToken,
   createOrder,
   captureOrder,
   executePayout,
+  verifyWebhookSignature,
 };

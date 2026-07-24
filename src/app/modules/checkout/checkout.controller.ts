@@ -36,11 +36,11 @@ const captureOrder: RequestHandler = catchAsync(async (req, res) => {
 
 const paypalWebhook = async (req: Request, res: Response) => {
   console.log("\n[WEBHOOK] Entering paypalWebhook controller...");
-  const signature = req.headers["paypal-transmission-sig"] as string;
+  const headers = req.headers;
   const body = req.body; // Buffer
 
   try {
-    const result = await CheckoutService.handleWebhook(body, signature);
+    const result = await CheckoutService.handleWebhook(body, headers);
     res.json(result);
   } catch (error: any) {
     console.error("[WEBHOOK ERROR] Webhook failed.", error.message);
