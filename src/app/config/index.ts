@@ -64,6 +64,7 @@ const config = {
     clientSecret: process.env.PAYPAL_CLIENT_SECRET ?? "",
     webhookId: process.env.PAYPAL_WEBHOOK_ID ?? "",
     frontendUrl: process.env.FRONTEND_URL ?? "",
+    mode: process.env.PAYPAL_MODE ?? "sandbox",
   },
 };
 

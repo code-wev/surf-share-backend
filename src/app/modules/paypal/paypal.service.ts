@@ -3,8 +3,9 @@ import config from "../../config";
 import AppError from "../../errors/AppError";
 
 const getBaseUrl = () => {
-  // Use sandbox for development, live for production
-  return config.nodeEnv === "production"
+  // Use PAYPAL_MODE to determine environment instead of NODE_ENV
+  // This allows sandbox testing on production servers
+  return config.paypal.mode === "live"
     ? "https://api-m.paypal.com"
     : "https://api-m.sandbox.paypal.com";
 };
