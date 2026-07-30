@@ -298,7 +298,7 @@ const getDashboardStats = async (role: Role) => {
             trendTone: "positive",
           },
           {
-            label: "Total Contributor",
+            label: "Total Photographers",
             value: photographerCount.toString(),
             trendLabel: getTrend(photographerCount, 0),
             trendTone: "positive",
