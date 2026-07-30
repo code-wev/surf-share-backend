@@ -80,7 +80,7 @@ const createSession = async (userId: string, photoIds: string[]) => {
   });
 
   // 3. Create PayPal Order
-  const paypalOrder = await PaypalService.createOrder(totalAmount, "USD");
+  const paypalOrder = await PaypalService.createOrder(totalAmount, "AUD");
 
   // 4. Update local order with PayPal Order ID
   await prisma.order.update({
@@ -132,7 +132,7 @@ const captureOrder = async (paypalOrderId: string) => {
             {
               receiver: photographer.paypalEmail,
               amount: item.photographerEarnings,
-              currency: "USD",
+              currency: "AUD",
               note: `Payout for photo ${item.photoId} sold on Surf Share`,
               senderItemId: `payout_${item.id}`,
             },
@@ -268,7 +268,7 @@ const retryPayment = async (userId: string, localOrderId: string) => {
   }
 
   // Create new PayPal Order
-  const paypalOrder = await PaypalService.createOrder(order.totalAmount, "USD");
+  const paypalOrder = await PaypalService.createOrder(order.totalAmount, "AUD");
 
   // Update order with new paypalOrderId
   await prisma.order.update({

@@ -237,7 +237,7 @@ const getDashboardStats = async (role: Role) => {
         id: user.id,
         name: user.name,
         photosLabel: `${photoCount} photos`,
-        earnings: `$${earningsValue.toLocaleString()}`,
+        earnings: `A$${earningsValue.toLocaleString()}`,
         avatarSrc: user.profileImageUrl ?? "/home/latest/latest1.jpg",
       };
     })
@@ -281,13 +281,13 @@ const getDashboardStats = async (role: Role) => {
       ? [
           {
             label: "Total Revenue",
-            value: `$${totalSales.toLocaleString()}`,
+            value: `A$${totalSales.toLocaleString()}`,
             trendLabel: getTrend(totalSales, prevSales),
             trendTone: totalSales >= prevSales ? "positive" : "negative",
           },
           {
             label: "Platform Revenue",
-            value: `$${platformRevenue.toLocaleString()}`,
+            value: `A$${platformRevenue.toLocaleString()}`,
             trendLabel: getTrend(platformRevenue, prevPlatformRevenue),
             trendTone: platformRevenue >= prevPlatformRevenue ? "positive" : "negative",
           },

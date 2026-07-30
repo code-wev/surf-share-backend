@@ -43,9 +43,9 @@ const generateAccessToken = async () => {
 /**
  * Create a PayPal Order.
  * @param amount Total amount for the order
- * @param currency Currency code (e.g., "USD")
+ * @param currency Currency code (e.g., "AUD")
  */
-const createOrder = async (amount: number, currency: string = "USD") => {
+const createOrder = async (amount: number, currency: string = "AUD") => {
   const accessToken = await generateAccessToken();
   const url = `${getBaseUrl()}/v2/checkout/orders`;
 
@@ -130,7 +130,7 @@ const executePayout = async (
       recipient_type: "EMAIL",
       amount: {
         value: p.amount.toFixed(2),
-        currency: p.currency || "USD",
+        currency: p.currency || "AUD",
       },
       note: p.note || "Thanks for your patronage!",
       sender_item_id: p.senderItemId || `item_${Date.now()}`,

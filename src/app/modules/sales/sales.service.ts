@@ -58,11 +58,11 @@ const getMySales = async (userId: string, locationId?: string) => {
 
     const items = soldPhotos.map((photo) => {
       const totalDownloads = photo.orderItems?.length || 0;
-      const earningsUsd = (photo.orderItems || []).reduce(
+      const earningsAud = (photo.orderItems || []).reduce(
         (acc, item) => acc + (item.photographerEarnings || 0),
         0,
       );
-      const commissionUsd = (photo.orderItems || []).reduce(
+      const commissionAud = (photo.orderItems || []).reduce(
         (acc, item) => acc + (item.platformFee || 0),
         0,
       );
@@ -77,11 +77,11 @@ const getMySales = async (userId: string, locationId?: string) => {
         location: `${locationName}, ${locationState}`,
         locationId: photo.locationId,
         uploadedAt: photo.createdAt ? photo.createdAt.toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
-        priceUsd: photo.price || 0,
+        priceAud: photo.price || 0,
         status: photo.status ? photo.status.toLowerCase() : "pending",
-        commissionUsd,
+        commissionAud,
         totalDownloads,
-        earningsUsd,
+        earningsAud,
         // Metadata
         resolution: photo.width && photo.height ? `${photo.width} x ${photo.height} px` : undefined,
         format: photo.format?.toUpperCase(),
@@ -89,11 +89,11 @@ const getMySales = async (userId: string, locationId?: string) => {
       };
     });
 
-    const totalEarnings = items.reduce((acc, item) => acc + item.earningsUsd, 0);
+    const totalEarnings = items.reduce((acc, item) => acc + item.earningsAud, 0);
     const totalSales = items.reduce(
       (acc, item) =>
         acc +
-        item.totalDownloads * item.priceUsd,
+        item.totalDownloads * item.priceAud,
       0,
     );
     const totalSoldPhotos = items.length;
