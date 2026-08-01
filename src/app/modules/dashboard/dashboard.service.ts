@@ -1,5 +1,5 @@
-import prisma from "../../utils/prisma";
-import { Role, UserStatus, OrderStatus } from "@prisma/client";
+import { OrderStatus, Role, UserStatus } from '@prisma/client';
+import prisma from '../../utils/prisma';
 
 type TopContributor = {
   id: string;
@@ -22,9 +22,9 @@ type WeeklyUploadBar = {
 };
 
 const getTrend = (current: number, previous: number) => {
-  if (previous === 0) return current > 0 ? "+ 100%" : "+ 0%";
+  if (previous === 0) return current > 0 ? '+ 100%' : '+ 0%';
   const diff = ((current - previous) / previous) * 100;
-  return `${diff >= 0 ? "+ " : "- "}${Math.abs(Math.round(diff))}%`;
+  return `${diff >= 0 ? '+ ' : '- '}${Math.abs(Math.round(diff))}%`;
 };
 
 const getDashboardStats = async (role: Role) => {
@@ -68,7 +68,7 @@ const getDashboardStats = async (role: Role) => {
     prisma.user.count({ where: { status: UserStatus.ACTIVE } }),
     prisma.location.count(),
     prisma.orderItem.count({ where: { order: { status: OrderStatus.PAID } } }),
-    prisma.photo.count({ where: { status: "PENDING" } }),
+    prisma.photo.count({ where: { status: 'PENDING' } }),
 
     // Cumulative stats before current month
     prisma.user.count({ where: { createdAt: { lt: firstDayCurrentMonth } } }),
@@ -130,15 +130,11 @@ const getDashboardStats = async (role: Role) => {
   const monthlyEarnings = Array.from({ length: 12 }).map((_, i) => {
     const d = new Date();
     d.setMonth(d.getMonth() - (11 - i));
-    const monthLabel = d.toLocaleString("default", { month: "short" });
+    const monthLabel = d.toLocaleString('default', { month: 'short' });
     const year = d.getFullYear();
     const m = d.getMonth();
     const val = earningsData
-      .filter(
-        (e) =>
-          e.order.createdAt.getMonth() === m &&
-          e.order.createdAt.getFullYear() === year,
-      )
+      .filter((e) => e.order.createdAt.getMonth() === m && e.order.createdAt.getFullYear() === year)
       .reduce((acc, curr) => acc + (curr.photographerEarnings || 0), 0);
     return { label: monthLabel, value: Number(val.toFixed(2)) };
   });
@@ -151,16 +147,8 @@ const getDashboardStats = async (role: Role) => {
 
   const weeklyUploadCounts = await Promise.all(
     weeklyDates.map((date) => {
-      const startOfDay = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate(),
-      );
-      const endOfDay = new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate() + 1,
-      );
+      const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
 
       return prisma.photo.count({
         where: {
@@ -173,18 +161,16 @@ const getDashboardStats = async (role: Role) => {
     }),
   );
 
-  const weeklyUploadActivity: WeeklyUploadBar[] = weeklyDates.map(
-    (date, index) => ({
-      dayLabel: date.toLocaleDateString("en-US", { weekday: "short" }),
-      uploads: weeklyUploadCounts[index] ?? 0,
-    }),
-  );
+  const weeklyUploadActivity: WeeklyUploadBar[] = weeklyDates.map((date, index) => ({
+    dayLabel: date.toLocaleDateString('en-US', { weekday: 'short' }),
+    uploads: weeklyUploadCounts[index] ?? 0,
+  }));
 
   // Get top contributors by photo count
   const topContributorsRaw = await prisma.photo.groupBy({
-    by: ["photographerId"],
+    by: ['photographerId'],
     _count: { id: true },
-    orderBy: { _count: { id: "desc" } },
+    orderBy: { _count: { id: 'desc' } },
     take: 5,
   });
 
@@ -210,15 +196,12 @@ const getDashboardStats = async (role: Role) => {
     },
   });
 
-  const earningsMap = earningsByPhotographer.reduce<Record<string, number>>(
-    (accumulator, item) => {
-      const photographerId = item.photo.photographerId;
-      accumulator[photographerId] =
-        (accumulator[photographerId] ?? 0) + (item.photographerEarnings ?? 0);
-      return accumulator;
-    },
-    {},
-  );
+  const earningsMap = earningsByPhotographer.reduce<Record<string, number>>((accumulator, item) => {
+    const photographerId = item.photo.photographerId;
+    accumulator[photographerId] =
+      (accumulator[photographerId] ?? 0) + (item.photographerEarnings ?? 0);
+    return accumulator;
+  }, {});
 
   const contributorMap = new Map(users.map((user) => [user.id, user]));
 
@@ -237,19 +220,17 @@ const getDashboardStats = async (role: Role) => {
         id: user.id,
         name: user.name,
         photosLabel: `${photoCount} photos`,
-        earnings: `A$${earningsValue.toLocaleString()}`,
-        avatarSrc: user.profileImageUrl ?? "/home/latest/latest1.jpg",
+        earnings: `$${earningsValue.toLocaleString()}`,
+        avatarSrc: user.profileImageUrl ?? '/home/latest/latest1.jpg',
       };
     })
-    .filter(
-      (contributor): contributor is TopContributor => contributor !== null,
-    );
+    .filter((contributor): contributor is TopContributor => contributor !== null);
 
   // Top Locations
   const topLocationsRaw = await prisma.photo.groupBy({
-    by: ["locationId"],
+    by: ['locationId'],
     _count: { id: true },
-    orderBy: { _count: { id: "desc" } },
+    orderBy: { _count: { id: 'desc' } },
     take: 8,
   });
 
@@ -280,78 +261,78 @@ const getDashboardStats = async (role: Role) => {
     role === Role.ADMIN
       ? [
           {
-            label: "Total Revenue",
-            value: `A$${totalSales.toLocaleString()}`,
+            label: 'Total Revenue',
+            value: `$${totalSales.toLocaleString()}`,
             trendLabel: getTrend(totalSales, prevSales),
-            trendTone: totalSales >= prevSales ? "positive" : "negative",
+            trendTone: totalSales >= prevSales ? 'positive' : 'negative',
           },
           {
-            label: "Platform Revenue",
-            value: `A$${platformRevenue.toLocaleString()}`,
+            label: 'Platform Revenue',
+            value: `$${platformRevenue.toLocaleString()}`,
             trendLabel: getTrend(platformRevenue, prevPlatformRevenue),
-            trendTone: platformRevenue >= prevPlatformRevenue ? "positive" : "negative",
+            trendTone: platformRevenue >= prevPlatformRevenue ? 'positive' : 'negative',
           },
           {
-            label: "Total Active User",
+            label: 'Total Active User',
             value: activeUsers.toString(),
             trendLabel: getTrend(activeUsers, prevUsers),
-            trendTone: "positive",
+            trendTone: 'positive',
           },
           {
-            label: "Total Photographers",
+            label: 'Total Photographers',
             value: photographerCount.toString(),
             trendLabel: getTrend(photographerCount, 0),
-            trendTone: "positive",
+            trendTone: 'positive',
           },
           {
-            label: "Total Location",
+            label: 'Total Location',
             value: totalLocationsCount.toString(),
             trendLabel: getTrend(totalLocationsCount, 0),
-            trendTone: "positive",
+            trendTone: 'positive',
           },
           {
-            label: "Total Photos",
+            label: 'Total Photos',
             value: totalPhotos.toString(),
             trendLabel: getTrend(totalPhotos, prevPhotos),
-            trendTone: totalPhotos >= prevPhotos ? "positive" : "negative",
+            trendTone: totalPhotos >= prevPhotos ? 'positive' : 'negative',
           },
           {
-            label: "Downloaded Photos",
+            label: 'Downloaded Photos',
             value: downloadedPhotos.toString(),
             trendLabel: getTrend(downloadedPhotos, prevDownloadedPhotos),
-            trendTone: downloadedPhotos >= prevDownloadedPhotos ? "positive" : "negative",
+            trendTone: downloadedPhotos >= prevDownloadedPhotos ? 'positive' : 'negative',
           },
           {
-            label: "Pending photos",
+            label: 'Pending photos',
             value: pendingPhotos.toString(),
-            trendLabel: "+ 0%",
-            trendTone: "negative",
+            trendLabel: '+ 0%',
+            trendTone: 'negative',
           },
         ]
       : [
           {
-            label: "Total Users",
+            label: 'Total Users',
             value: totalUsers.toString(),
             trendLabel: getTrend(totalUsers, prevUsers),
-            trendTone: totalUsers >= prevUsers ? "positive" : "negative",
+            trendTone: totalUsers >= prevUsers ? 'positive' : 'negative',
           },
           {
-            label: "Total Photos",
+            label: 'Total Photos',
             value: totalPhotos.toString(),
             trendLabel: getTrend(totalPhotos, prevPhotos),
-            trendTone: totalPhotos >= prevPhotos ? "positive" : "negative",
+            trendTone: totalPhotos >= prevPhotos ? 'positive' : 'negative',
           },
           {
-            label: "Downloaded Photos",
+            label: 'Downloaded Photos',
             value: downloadedPhotos.toString(),
             trendLabel: getTrend(downloadedPhotos, prevDownloadedPhotos),
-            trendTone: downloadedPhotos >= prevDownloadedPhotos ? "positive" : "negative",
+            trendTone: downloadedPhotos >= prevDownloadedPhotos ? 'positive' : 'negative',
           },
           {
-            label: "Pending photos",
+            label: 'Pending photos',
             value: pendingPhotos.toString(),
-            trendLabel: "+ 0%",
-            trendTone: "negative",
+            trendLabel: '+ 0%',
+            trendTone: 'negative',
           },
         ];
 
