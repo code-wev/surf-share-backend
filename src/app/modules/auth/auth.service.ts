@@ -109,7 +109,7 @@ const checkExistingUser = async (email: string) => {
 // Register as Surfer
 const registerSurfer = async (
   payload: ISurferRegisterPayload,
-): Promise<IUserResponse> => {
+): Promise<ILoginResponse> => {
   await checkExistingUser(payload.email);
   const hashedPassword = await bcrypt.hash(
     payload.password!,
@@ -129,13 +129,41 @@ const registerSurfer = async (
     },
   });
 
-  return sanitizeUser(user);
+  const authPayload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    permissions: user.permissions,
+  };
+  const accessToken = jwt.sign(authPayload, config.jwt.accessSecret as string, {
+    expiresIn: config.jwt.accessExpiresIn,
+  });
+
+  const refreshToken = jwt.sign(
+    authPayload,
+    config.jwt.refreshSecret as string,
+    {
+      expiresIn: config.jwt.refreshExpiresIn,
+    },
+  );
+
+  const hashedRefreshToken = await bcrypt.hash(
+    refreshToken,
+    Number(config.bcryptSaltRounds),
+  );
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken: hashedRefreshToken },
+  });
+
+  return { accessToken, refreshToken, user: sanitizeUser(user) };
 };
 
 // Register as Photographer
 const registerPhotographer = async (
   payload: IPhotographerRegisterPayload,
-): Promise<IUserResponse> => {
+): Promise<ILoginResponse> => {
   await checkExistingUser(payload.email);
   const hashedPassword = await bcrypt.hash(
     payload.password!,
@@ -160,7 +188,35 @@ const registerPhotographer = async (
     },
   });
 
-  return sanitizeUser(user);
+  const authPayload = {
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+    permissions: user.permissions,
+  };
+  const accessToken = jwt.sign(authPayload, config.jwt.accessSecret as string, {
+    expiresIn: config.jwt.accessExpiresIn,
+  });
+
+  const refreshToken = jwt.sign(
+    authPayload,
+    config.jwt.refreshSecret as string,
+    {
+      expiresIn: config.jwt.refreshExpiresIn,
+    },
+  );
+
+  const hashedRefreshToken = await bcrypt.hash(
+    refreshToken,
+    Number(config.bcryptSaltRounds),
+  );
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { refreshToken: hashedRefreshToken },
+  });
+
+  return { accessToken, refreshToken, user: sanitizeUser(user) };
 };
 
 // Register as Moderator

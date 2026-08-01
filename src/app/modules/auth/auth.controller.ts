@@ -10,11 +10,22 @@ import AppError from "../../errors/AppError";
 const registerSurfer: RequestHandler = catchAsync(async (req, res) => {
   const result = await AuthService.registerSurfer(req.body);
 
+  const { refreshToken, ...responseData } = result;
+
+  if (refreshToken) {
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: config.nodeEnv === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+  }
+
   sendResponse(res, {
     statusCode: 201,
     success: true,
     message: "Surfer registered successfully.",
-    data: result,
+    data: responseData,
   });
 });
 
@@ -22,11 +33,22 @@ const registerSurfer: RequestHandler = catchAsync(async (req, res) => {
 const registerPhotographer: RequestHandler = catchAsync(async (req, res) => {
   const result = await AuthService.registerPhotographer(req.body);
 
+  const { refreshToken, ...responseData } = result;
+
+  if (refreshToken) {
+    res.cookie("refreshToken", refreshToken, {
+      httpOnly: true,
+      secure: config.nodeEnv === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+  }
+
   sendResponse(res, {
     statusCode: 201,
     success: true,
     message: "Photographer registered successfully.",
-    data: result,
+    data: responseData,
   });
 });
 
