@@ -270,6 +270,7 @@ const getAllPhotos = async (query: Record<string, unknown>) => {
         select: {
           name: true,
           socialAccount: true,
+          subscriptionTier: true,
         },
       },
       location: true,
@@ -339,6 +340,7 @@ const getPhotosForModerator = async (query: IPhotoQuery) => {
             id: true,
             name: true,
             email: true,
+            subscriptionTier: true,
           },
         },
       },
@@ -449,6 +451,7 @@ const getPhotoById = async (photoId: string) => {
           name: true,
           email: true,
           role: true,
+          subscriptionTier: true,
         },
       },
     },

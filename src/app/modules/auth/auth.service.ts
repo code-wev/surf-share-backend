@@ -75,6 +75,7 @@ const sanitizeUser = (user: UserWithSocialAccount): IUserResponse => ({
   promotionEmail: (user as any).promotionEmail ?? false,
   acceptedApproval: (user as any).acceptedApproval ?? false,
   acceptedContributor: (user as any).acceptedContributor ?? false,
+  subscriptionTier: (user as any).subscriptionTier,
 });
 
 /**

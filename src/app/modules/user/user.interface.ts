@@ -46,6 +46,7 @@ export interface IUserResponse {
   photoCount?: number;
   purchasePhoto?: number;
   platformCommission?: number;
+  subscriptionTier?: string;
   countryName?: string | null;
   address?: string | null;
   phoneNumber?: string | null;
