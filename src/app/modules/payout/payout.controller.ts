@@ -4,6 +4,21 @@ import sendResponse from "../../utils/sendResponse";
 import { PayoutService } from "./payout.service";
 import AppError from "../../errors/AppError";
 
+const getAllPayouts: RequestHandler = catchAsync(async (req, res) => {
+  const { status, search } = req.query;
+  const result = await PayoutService.getAllPayouts({
+    status: status as string,
+    search: search as string,
+  });
+
+  sendResponse(res, {
+    statusCode: 200,
+    success: true,
+    message: "Payouts retrieved successfully.",
+    data: result,
+  });
+});
+
 const getPendingPayouts: RequestHandler = catchAsync(async (req, res) => {
   const result = await PayoutService.getPendingPayouts();
 
@@ -33,6 +48,7 @@ const markAsPaid: RequestHandler = catchAsync(async (req, res) => {
 });
 
 export const PayoutController = {
+  getAllPayouts,
   getPendingPayouts,
   markAsPaid,
 };
